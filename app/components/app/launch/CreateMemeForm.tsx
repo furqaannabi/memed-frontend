@@ -112,6 +112,7 @@ export default function CreateMemeForm({
             handleNextStep();
             console.log(memeTitle, memeDescription, memeImage);
           }}
+          disabled={!memeImage || !memeTitle || !memeDescription}
           className="px-4 py-2 gap-2 bg-green-500 rounded-md  text-black hover:shadow-2xl  cursor-pointer flex"
         >
           Next <ChevronRightIcon />

@@ -113,6 +113,7 @@ class ApiClient {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const response = await this.fetchWithTimeout(url, {
+          credentials: "include", // Default credentials
           ...requestConfig,
           headers,
         });

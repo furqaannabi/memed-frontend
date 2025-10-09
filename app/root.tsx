@@ -38,6 +38,7 @@ import { useAuthStore } from "./store/auth";
 export default function App() {
   // Verify user session on initial app load
   useEffect(() => {
+    // console.log("verifying");
     useAuthStore.getState().verifySession();
   }, []);
 

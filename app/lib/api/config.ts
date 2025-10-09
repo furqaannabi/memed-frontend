@@ -125,6 +125,7 @@ export const API_ENDPOINTS = {
   // Auth
   CREATE_NONCE: "/create-nonce",
   CONNECT_WALLET: "/connect-wallet",
+  CONNECT_SOCIAL: "/connect-social",
 } as const;
 
 /**

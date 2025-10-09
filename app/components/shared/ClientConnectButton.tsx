@@ -85,6 +85,7 @@ export function ClientConnectButton() {
     if (authData?.message) {
       console.log(
         "Authentication successful. Re-verifying session to fetch user data.",
+        authData?.message,
       );
       // After the /connect-wallet call succeeds, we trigger a session verification
       // which will fetch the user data from /user and update the global state.

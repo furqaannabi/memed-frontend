@@ -27,6 +27,7 @@ export default function LaunchPage() {
   const [memeTitle, setMemeTitle] = useState<string>("");
   const [memeDescription, setMemeDescription] = useState<string>("");
   const [memeSymbol, setMemeSymbol] = useState<string>("");
+  const [isSigning, setIsSigning] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -55,6 +56,7 @@ export default function LaunchPage() {
     }
 
     try {
+      setIsSigning(true);
       // 1. Get nonce
       const nonceResponse = await createNonce({ address });
       if (!nonceResponse?.nonce) {
@@ -64,6 +66,7 @@ export default function LaunchPage() {
 
       // 2. Sign the nonce to get a signature
       const signature = await signMessageAsync({ message });
+      setIsSigning(false);
 
       // 3. Prepare form data
       const response = await fetch(memeImage);
@@ -85,6 +88,7 @@ export default function LaunchPage() {
       // 4. Call the create token endpoint
       await createToken(formData);
     } catch (e) {
+      setIsSigning(false);
       console.error("Minting error:", e);
       const errorMessage =
         e instanceof Error ? e.message : "An unexpected error occurred.";
@@ -210,6 +214,7 @@ export default function LaunchPage() {
                 <TokenSettingForm
                   handlePrevStep={handlePrevStep}
                   handleMint={handleMint}
+                  isSigning={isSigning}
                   isMinting={isMinting}
                   memeImage={memeImage}
                   memeSymbol={memeSymbol}
