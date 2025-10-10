@@ -1,40 +1,36 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router";
 import { toast } from "sonner";
+import { useAccount, useSignMessage } from "wagmi";
 
 import ConnectProfile from "../../components/app/launch/ConnectProfile";
 import CreateMemeForm from "@/components/app/launch/CreateMemeForm";
 import TokenSettingForm from "../../components/app/launch/TokenSettingForm";
+import { apiClient } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/config";
 import { Share2Icon } from "lucide-react";
+import { Link } from "react-router";
+import { useCreateNonce } from "@/hooks/api/useAuth";
 
 export default function LaunchPage() {
-  // Dummy data for selectedAccount and accounts
-  const selectedAccount = {
-    username: {
-      localName: "dummyuser",
-    },
-  };
-  const accounts = [selectedAccount];
+  const { address } = useAccount();
+  const { mutate: createNonce } = useCreateNonce();
+  const { signMessageAsync } = useSignMessage();
 
-  // Dummy functions for wallet and chain interactions
-  const signWithConnectKit = async (message: string) => {
-    console.log("Simulating signWithConnectKit with message:", message);
-    return "dummy_signature";
-  };
-  const address = "0xDummyAddress";
-  const chain = { id: 1 }; // Simulate mainnet
-
-  const showToast = (message: string) => {
-    alert(message); // Simple alert for demonstration
-  };
-
-  const [memeImage, setMemeImage] = useState<string | null>("");
+  // State for the multi-step form
   const [step, setStep] = useState(1);
-  const [isMinting, setIsMinting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // State for meme data
+  const [memeImage, setMemeImage] = useState<string | null>(null);
   const [memeTitle, setMemeTitle] = useState<string>("");
   const [memeDescription, setMemeDescription] = useState<string>("");
   const [memeSymbol, setMemeSymbol] = useState<string>("");
+
+  // Manual state for minting process
+  const [isSigning, setIsSigning] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [createdToken, setCreatedToken] = useState<any | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -54,65 +50,83 @@ export default function LaunchPage() {
 
   const handleMint = async () => {
     if (!address) {
-      showToast("Wallet not connected");
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+    if (!memeTitle || !memeSymbol || !memeDescription || !memeImage) {
+      toast.error("Please fill out all fields and upload an image.");
       return;
     }
 
-    if (!selectedAccount?.username.localName) {
-      showToast("No Lens handle selected");
-      return;
-    }
-
-    setIsMinting(true);
-
-    // Simulate chain check and switch
-    if (chain && chain?.id !== 1) {
-      // Assuming 1 is mainnet
-      console.log("Simulating chain switch");
-      // switchToChain(TransactionType.accountCreation);
-    }
     try {
-      // Generate timestamp
-      const timestamp = Date.now();
-      const handle = selectedAccount.username.localName;
+      // 1. Set signing state
+      setIsSigning(true);
+      const nonceResponse = await createNonce({ address });
+      if (!nonceResponse?.nonce) {
+        throw new Error("Failed to retrieve nonce for signing.");
+      }
+      const nonce = nonceResponse.nonce;
 
-      // Create message
-      const message = `Mint meme for handle: ${handle} at ${timestamp}`;
-      const signature = await signWithConnectKit(message);
+      // 2. Sign the nonce to get a signature
+      const signature = await signMessageAsync({ message: nonce });
+      setIsSigning(false);
 
-      console.log(
-        {
-          name: memeTitle,
-          ticker: memeSymbol,
-          description: memeDescription,
-          image: memeImage,
-          message,
-          signature,
-          timestamp,
-        },
-        `Simulating API call to mintMemeCoins/${handle}`,
+      // 3. Set minting state
+      setIsMinting(true);
+
+      // 4. Prepare form data and headers
+      const response = await fetch(memeImage);
+      const blob = await response.blob();
+      const imageFile = new File([blob], "meme-image.png", { type: blob.type });
+
+      const textData = {
+        name: memeTitle,
+        ticker: memeSymbol,
+        description: memeDescription,
+      };
+
+      const formData = new FormData();
+      formData.append("data", JSON.stringify(textData));
+      formData.append("image", imageFile);
+
+      const headers = {
+        Nonce: JSON.stringify({ message: nonce, signature }),
+      };
+
+      // 5. Call the API directly using apiClient
+      const result = await apiClient.post(
+        API_ENDPOINTS.CREATE_TOKEN,
+        formData,
+        { headers, timeout: 60000, retries: 0 }, // 60s timeout, no retries
       );
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      setShowSuccess(true);
-
-      // Simulate confetti
-      console.log("Simulating confetti");
-
-      console.log("Minting successful");
-    } catch (error) {
+      setCreatedToken(result.data);
+    } catch (e) {
+      const error = e as Error;
+      setError(error);
       console.error("Minting error:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to mint meme coins. Please try again.",
-      );
+      toast.error(error.message || "An unexpected error occurred.");
     } finally {
+      setIsSigning(false);
       setIsMinting(false);
     }
   };
+
+  // Handle successful token creation
+  useEffect(() => {
+    if (createdToken) {
+      console.log("Token created successfully:", createdToken);
+      setShowSuccess(true);
+    }
+  }, [createdToken]);
+
+  // Handle error during token creation
+  useEffect(() => {
+    if (error) {
+      console.error("Minting error:", error);
+      // Toast is already shown in handleMint, but you could add more handling here
+    }
+  }, [error]);
 
   if (showSuccess) {
     return (
@@ -137,9 +151,7 @@ export default function LaunchPage() {
                 <div className="relative w-64 h-64 mx-auto mb-6">
                   {memeImage && (
                     <img
-                      src={`${
-                        import.meta.env.VITE_LIGHTHOUSE_GATEWAY
-                      }${memeImage}`}
+                      src={memeImage}
                       alt="Your meme"
                       className="object-contain w-full h-full"
                     />
@@ -191,17 +203,11 @@ export default function LaunchPage() {
         <div className="container relative z-10 px-4 py-12 mx-auto">
           <div className="max-w-4xl mx-auto">
             {/* Step Content */}
-            <div
-              key={step}
-              // initial={{ opacity: 0, y: 20 }}
-              // animate={{ opacity: 1, y: 0 }}
-              // exit={{ opacity: 0, y: -20 }}
-              // transition={{ duration: 0.3 }}
-            >
+            <div>
               {step === 1 && (
                 <ConnectProfile
                   setStep={setStep}
-                  selectedAccount={selectedAccount}
+                  selectedAccount={null} // Dummy data removed
                 />
               )}
               {step === 2 && (
@@ -222,6 +228,7 @@ export default function LaunchPage() {
                 <TokenSettingForm
                   handlePrevStep={handlePrevStep}
                   handleMint={handleMint}
+                  isSigning={isSigning}
                   isMinting={isMinting}
                   memeImage={memeImage}
                   memeSymbol={memeSymbol}

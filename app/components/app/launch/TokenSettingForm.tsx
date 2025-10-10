@@ -5,6 +5,7 @@ import { toast } from "sonner";
 export default function TokenSettingForm({
   handlePrevStep,
   handleMint,
+  isSigning,
   isMinting,
   memeImage,
   memeSymbol,
@@ -15,6 +16,7 @@ export default function TokenSettingForm({
 }: {
   handlePrevStep: () => void;
   handleMint: () => void;
+  isSigning: boolean;
   isMinting: boolean;
   memeImage: string | null;
   memeSymbol: string;
@@ -39,6 +41,12 @@ export default function TokenSettingForm({
     setIsSymbolDialogOpen(false);
   };
 
+  const getButtonText = () => {
+    if (isSigning) return "Signing...";
+    if (isMinting) return "Minting...";
+    return <>🚀 Launch Token</>;
+  };
+
   return (
     <div className="p-8 bg-neutral-900 rounded-xl border border-neutral-800  max-w-4xl mx-auto">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -59,7 +67,7 @@ export default function TokenSettingForm({
             <div className="relative w-full aspect-square">
               {memeImage && (
                 <img
-                  src={`${import.meta.env.VITE_LIGHTHOUSE_GATEWAY}${memeImage}`}
+                  src={memeImage}
                   alt="Uploaded meme"
                   className="object-contain w-full h-full"
                 />
@@ -213,10 +221,16 @@ export default function TokenSettingForm({
           </label>
           <button
             onClick={handleMint}
-            className="w-full sm:w-auto bg-green-600 p-2  text-white hover:bg-primary-dark cursor-pointer px-8 border border-neutral-800  hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            disabled={isMinting || !hasReviewed || !memeTitle || !memeSymbol}
+            className="w-full sm:w-auto bg-green-600 p-2  text-white hover:bg-primary-dark cursor-pointer px-8 border border-neutral-800  hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_0px_rgba(0,0_0,1)]"
+            disabled={
+              isSigning ||
+              isMinting ||
+              !hasReviewed ||
+              !memeTitle ||
+              !memeSymbol
+            }
           >
-            {isMinting ? <>Launching...</> : <>🚀 Launch Token</>}
+            {getButtonText()}
           </button>
         </div>
       </div>

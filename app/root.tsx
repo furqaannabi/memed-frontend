@@ -32,7 +32,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { useEffect } from "react";
+import { useAuthStore } from "./store/auth";
+
 export default function App() {
+  // Verify user session on initial app load
+  useEffect(() => {
+    // console.log("verifying");
+    useAuthStore.getState().verifySession();
+  }, []);
+
   return (
     <Web3Provider>
       <Outlet />
