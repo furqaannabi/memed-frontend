@@ -4,7 +4,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { FACTORY_ADDRESS } from "@/config/contracts";
-import factoryAbi from "@/abi/factory.json";
+import { factoryAbi } from "@/abi";
 
 /**
  * Hook to read all tokens from the MemedFactory contract.

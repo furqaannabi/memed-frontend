@@ -5,7 +5,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { ENGAGE_TO_EARN_ADDRESS } from "@/config/contracts";
-import memedEngageToEarnAbi from "@/abi/memedEngageToEarn.json";
+import { memedEngageToEarnAbi } from "@/abi";
 
 /**
  * Hook to read a user's engagement reward for a specific token.
@@ -23,7 +23,10 @@ export function useGetUserEngagementReward(
     address: ENGAGE_TO_EARN_ADDRESS,
     abi: memedEngageToEarnAbi,
     functionName: "getUserEngagementReward",
-    args: [addressToQuery, tokenAddress],
+    args: [
+      addressToQuery ?? "0x0000000000000000000000000000000000000000",
+      tokenAddress,
+    ],
     query: {
       enabled: !!tokenAddress && !!addressToQuery,
     },

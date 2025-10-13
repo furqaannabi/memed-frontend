@@ -4,7 +4,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { BATTLE_RESOLVER_ADDRESS } from "@/config/contracts";
-import memedBattleResolverAbi from "@/abi/memedBattleResolver.json";
+import { memedBattleResolverAbi } from "@/abi";
 
 /**
  * Hook to read the list of battle IDs that are ready to be resolved.

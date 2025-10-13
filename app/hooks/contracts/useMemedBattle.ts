@@ -4,7 +4,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { BATTLE_ADDRESS } from "@/config/contracts";
-import memedBattleAbi from "@/abi/memedBattle.json";
+import { memedBattleAbi } from "@/abi";
 
 /**
  * Hook to read all battles from the MemedBattle contract.

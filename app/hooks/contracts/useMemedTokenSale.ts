@@ -5,7 +5,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { TOKEN_SALE_ADDRESS } from "@/config/contracts";
-import memedTokenSaleAbi from "@/abi/memedTokenSale.json";
+import { memedTokenSaleAbi } from "@/abi";
 
 /**
  * Hook to read data for a specific fair launch.
@@ -39,7 +39,10 @@ export function useGetUserCommitment(
     address: TOKEN_SALE_ADDRESS,
     abi: memedTokenSaleAbi,
     functionName: "getUserCommitment",
-    args: [launchId, addressToQuery],
+    args: [
+      launchId,
+      addressToQuery ?? "0x0000000000000000000000000000000000000000",
+    ],
     query: {
       enabled: !!launchId && !!addressToQuery,
     },
@@ -81,4 +84,66 @@ export function useCommitToFairLaunch() {
     hash,
     error,
   };
+}
+
+/**
+ * Hook for the `sellTokens` write function on the MemedTokenSale contract.
+ */
+export function useSellTokens() {
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+
+  type SellTokensArgs = {
+    id: bigint;
+    amount: bigint;
+  };
+
+  const sellTokens = (args: SellTokensArgs) => {
+    writeContract({
+      address: TOKEN_SALE_ADDRESS,
+      abi: memedTokenSaleAbi,
+      functionName: "sellTokens",
+      args: [args.id, args.amount],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  return { sellTokens, isPending, isConfirming, isConfirmed, hash, error };
+}
+
+/**
+ * Hook to preview the amount of native token received for selling a given amount of tokens.
+ * @param id The ID of the fair launch.
+ * @param amount The amount of tokens to sell (as a bigint, in wei).
+ */
+export function useGetTokenToNativeToken(id: bigint, amount: bigint) {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "getTokenToNativeToken",
+    args: [id, amount],
+    query: {
+      enabled: !!id && !!amount && amount > 0n,
+    },
+  });
+}
+
+/**
+ * Hook to preview the amount of tokens received for a given amount of native token.
+ * @param id The ID of the fair launch.
+ * @param amount The amount of native token to spend (as a bigint, in wei).
+ */
+export function useGetNativeToTokenAmount(id: bigint, amount: bigint) {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "getNativeToTokenAmount",
+    args: [id, amount],
+    query: {
+      enabled: !!id && !!amount && amount > 0n,
+    },
+  });
 }
