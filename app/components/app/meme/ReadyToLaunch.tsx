@@ -1,6 +1,32 @@
 import { RocketIcon, CheckCircle, Clock } from "lucide-react";
 import { formatEther } from "viem";
 
+/**
+ * Format large numbers for display with proper decimal places and compact notation
+ * @param value - The number value as a string (from formatEther)
+ * @returns Formatted string with appropriate precision
+ */
+function formatTokenAmount(value: string): string {
+  const num = parseFloat(value);
+
+  // Handle zero and very small numbers
+  if (num === 0) return "0";
+  if (num < 0.01) return "<0.01";
+
+  // For millions (1,000,000+)
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(2)}M`;
+  }
+
+  // For thousands (1,000+)
+  if (num >= 1_000) {
+    return `${(num / 1_000).toFixed(2)}K`;
+  }
+
+  // For smaller numbers, show 2 decimal places
+  return num.toFixed(2);
+}
+
 interface ReadyToLaunchProps {
   tokenId: bigint;
   fairLaunchData?: readonly [number, bigint, bigint, bigint, string, bigint];
@@ -42,7 +68,7 @@ const ReadyToLaunch = ({ tokenId, fairLaunchData }: ReadyToLaunchProps) => {
               <span className="text-green-400 text-sm font-medium">Target Achieved</span>
             </div>
             <div className="text-white text-lg font-semibold">
-              {formatEther(totalCommitted)} ETH
+              {formatTokenAmount(formatEther(totalCommitted))} ETH
             </div>
             <div className="text-neutral-400 text-xs">Total Committed</div>
           </div>
@@ -52,7 +78,7 @@ const ReadyToLaunch = ({ tokenId, fairLaunchData }: ReadyToLaunchProps) => {
               <span className="text-green-400 text-sm font-medium">Tokens Reserved</span>
             </div>
             <div className="text-white text-lg font-semibold">
-              {formatEther(totalSold)}
+              {formatTokenAmount(formatEther(totalSold))}
             </div>
             <div className="text-neutral-400 text-xs">MEME Tokens</div>
           </div>

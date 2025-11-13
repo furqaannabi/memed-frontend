@@ -15,6 +15,7 @@ import { useNavigate } from "react-router";
 export function ClientConnectButton() {
   const [mounted, setMounted] = useState(false);
   const [signInStatus, setSignInStatus] = useState("idle"); // 'idle', 'getting_nonce', 'signing', 'connecting'
+  const [authAttempted, setAuthAttempted] = useState(false); // Track if auth was attempted for this connection
 
   const { address, isConnected } = useAccount();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
@@ -55,27 +56,30 @@ export function ClientConnectButton() {
     setMounted(true);
   }, []);
 
+  // Reset auth attempt flag when wallet changes
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setAuthAttempted(false);
+      setSignInStatus("idle");
+    }
+  }, [isConnected, address]);
+
   // 1. Trigger sign-in flow when wallet connects and user is not authenticated
   useEffect(() => {
+    // Only attempt auth once per connection and when not already authenticated
     if (
-      isConnected &&
-      address &&
-      !isAuthenticated &&
-      !isAuthLoading &&
+      isConnected && 
+      address && 
+      !isAuthenticated && 
+      !authAttempted && 
       signInStatus === "idle"
     ) {
-      console.log("Wallet connected, starting sign-in flow...");
+      console.log("Wallet connected, starting auth flow...");
+      setAuthAttempted(true);
       setSignInStatus("getting_nonce");
       createNonce({ address });
     }
-  }, [
-    isConnected,
-    address,
-    isAuthenticated,
-    isAuthLoading,
-    signInStatus,
-    createNonce,
-  ]);
+  }, [isConnected, address, isAuthenticated, authAttempted, signInStatus]);
 
   // 2. Sign message when nonce is received
   useEffect(() => {
@@ -124,7 +128,11 @@ export function ClientConnectButton() {
         "An error occurred during the auth flow:",
         nonceError || authError,
       );
-      // setSignInStatus("idle"); // Do not reset to idle, to prevent infinite loop on error
+      // Reset status and auth attempt flag after error to allow retry
+      setTimeout(() => {
+        setSignInStatus("idle");
+        setAuthAttempted(false);
+      }, 3000); // Wait 3 seconds before allowing retry
     }
   }, [nonceError, authError]);
 

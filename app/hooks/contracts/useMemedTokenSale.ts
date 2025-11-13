@@ -11,6 +11,7 @@ import { baseSepolia, base } from "wagmi/chains";
 
 /**
  * Hook to read the status of a specific fair launch.
+ * Polls every 5 seconds to keep status up-to-date in real-time.
  * @param launchId The ID of the fair launch.
  */
 export function useGetFairLaunchStatus(launchId: bigint) {
@@ -21,12 +22,14 @@ export function useGetFairLaunchStatus(launchId: bigint) {
     args: [launchId],
     query: {
       enabled: !!launchId,
+      refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     },
   });
 }
 
 /**
  * Hook to read full fair launch data using fairLaunchData function.
+ * Polls every 5 seconds to keep data up-to-date in real-time.
  * @param launchId The ID of the fair launch.
  */
 export function useFairLaunchData(launchId: bigint) {
@@ -38,12 +41,14 @@ export function useFairLaunchData(launchId: bigint) {
     chainId: baseSepolia.id, // Force Base Sepolia since contract is deployed there
     query: {
       enabled: !!launchId && launchId >= 0n,
+      refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     },
   });
 }
 
 /**
  * Hook to read a user's commitment to a fair launch.
+ * Polls every 5 seconds to keep commitment data up-to-date in real-time.
  * @param launchId The ID of the fair launch.
  * @param userAddress The address of the user (optional, defaults to connected wallet).
  */
@@ -64,6 +69,7 @@ export function useGetUserCommitment(
     ],
     query: {
       enabled: !!launchId && !!addressToQuery,
+      refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     },
   });
 }

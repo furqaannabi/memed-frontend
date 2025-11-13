@@ -4,6 +4,32 @@ import { formatEther } from "viem";
 import { useChainId, useSwitchChain } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 
+/**
+ * Format large numbers for display with proper decimal places and compact notation
+ * @param value - The number value as a string (from formatEther)
+ * @returns Formatted string with appropriate precision
+ */
+function formatTokenAmount(value: string): string {
+  const num = parseFloat(value);
+
+  // Handle zero and very small numbers
+  if (num === 0) return "0";
+  if (num < 0.01) return "<0.01";
+
+  // For millions (1,000,000+)
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(2)}M`;
+  }
+
+  // For thousands (1,000+)
+  if (num >= 1_000) {
+    return `${(num / 1_000).toFixed(2)}K`;
+  }
+
+  // For smaller numbers, show 2 decimal places
+  return num.toFixed(2);
+}
+
 interface LaunchProgressProps {
   tokenId: bigint;
   key?: string; // Add key prop to force re-render when data changes
@@ -152,32 +178,32 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
         Launch Progress
       </h2>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - Updated with green theme for success/commitment tracking */}
       <div className="w-full bg-neutral-800 h-3 rounded-full mb-2">
         <div
-          className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
+          className="bg-gradient-to-r from-green-500 to-green-400 h-3 rounded-full transition-all duration-300 shadow-lg shadow-green-500/20"
           style={{ width: `${progressPercentage}%` }}
         />
       </div>
       <div className="flex justify-between text-sm text-neutral-400 mb-6">
-        <span>{progressPercentage.toFixed(1)}% Complete ({formatEther(totalCommitted)} ETH)</span>
+        <span>{progressPercentage.toFixed(1)}% Complete ({formatTokenAmount(formatEther(totalCommitted))} ETH)</span>
         <span>
-          {formatEther(totalCommitted)} / 40 ETH
+          {formatTokenAmount(formatEther(totalCommitted))} / 40 ETH
         </span>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Display formatted token amounts for better readability */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-neutral-800 rounded-lg p-4 text-center">
           <div className="text-green-400 text-2xl font-semibold">
-            {totalSold > 0n ? formatEther(totalSold) : "0"}
+            {totalSold > 0n ? formatTokenAmount(formatEther(totalSold)) : "0"}
           </div>
           <div className="text-sm text-neutral-400">Tokens Sold</div>
         </div>
         <div className="bg-neutral-800 rounded-lg p-4 text-center">
           <div className="text-blue-400 text-2xl font-semibold">
-            {totalCommitted > 0n 
-              ? `${formatEther(totalCommitted)} ETH`
+            {totalCommitted > 0n
+              ? `${formatTokenAmount(formatEther(totalCommitted))} ETH`
               : "0 ETH"
             }
           </div>
