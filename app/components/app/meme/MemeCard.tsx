@@ -39,8 +39,10 @@ const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
           {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400 mb-3">
             <span className="text-green-400 font-medium">
-              {/* Safely access userId with fallback to prevent undefined errors */}
-              user...{token.userId?.slice(-4) || "Unknown"}
+              {/* Display token contract address if deployed, otherwise fallback to user ID */}
+              {token.address
+                ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}`
+                : `user...${token.userId?.slice(-4) || "Unknown"}`}
             </span>
             <span className="w-1 h-1 bg-neutral-600 rounded-full" />
             <span>

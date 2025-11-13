@@ -4,9 +4,10 @@ import LaunchProgress from "@/components/app/meme/LaunchProgress";
 import CommitETHForm from "@/components/app/meme/CommitETHForm";
 import CountdownTimer from "@/components/app/meme/CountdownTimer";
 import ReadyToLaunch from "@/components/app/meme/ReadyToLaunch";
+import LoadingState from "@/components/app/meme/LoadingState";
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
-import TradeForm from "@/components/app/meme/TradeForm";
+// import TradeForm from "@/components/app/meme/TradeForm"; // Commented out - not needed per team lead
 import { useFairLaunchData } from "@/hooks/contracts/useMemedTokenSale";
 import BattleHistory from "@/components/app/meme/BattleHistory";
 import ActiveBattles from "@/components/app/meme/ActiveBattles";
@@ -24,12 +25,11 @@ export default function Meme() {
   const { memeId } = useParams();
   const [active, setActive] = useState<boolean>(false);
   const [refreshKey, setRefreshKey] = useState<string>(Date.now().toString());
-
+  console.log(token);
   // Phase states: 1 = commitment, 2 = ready to launch, 3 = launched
   const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3>(1);
 
-  console.log(token);
-  // Helper function to convert token ID to contract ID
+  // Helper function to convert token ID to contract ID with error handling
   const getContractTokenId = (token: Token) => {
     try {
       if (token.fairLaunchId !== undefined && token.fairLaunchId !== null) {
@@ -42,7 +42,7 @@ export default function Meme() {
 
       return 0n;
     } catch (error) {
-      console.error("Error converting ID to BigInt:", error);
+      // Silently handle conversion errors and return 0
       return 0n;
     }
   };
@@ -51,16 +51,12 @@ export default function Meme() {
   const contractTokenId = token ? getContractTokenId(token) : 0n;
 
   // Monitor fair launch status for real-time phase changes
-  const { data: fairLaunchData } = useFairLaunchData(contractTokenId);
+  const { data: fairLaunchData, isLoading: isFairLaunchLoading } = useFairLaunchData(contractTokenId);
 
-  // Real-time phase monitoring
+  // Real-time phase monitoring - updates UI based on contract status
   useEffect(() => {
     if (fairLaunchData) {
       const status = fairLaunchData[0]; // status is at index 0
-
-      console.log("=== PHASE MONITORING ===");
-      console.log("Current contract status:", status);
-      console.log("Current UI phase:", currentPhase);
 
       if (status === 1) {
         setCurrentPhase(1); // Commitment phase
@@ -72,9 +68,6 @@ export default function Meme() {
         setCurrentPhase(3); // Launched phase
         setActive(true);
       }
-
-      console.log("Updated UI phase to:", status);
-      console.log("=== END PHASE MONITORING ===");
     }
   }, [fairLaunchData, currentPhase]);
 
@@ -114,6 +107,25 @@ export default function Meme() {
     );
   }
 
+  // Show loading skeleton while fair launch data is being fetched
+  // Prevents flash of wrong phase components before data arrives
+  if (isFairLaunchLoading && !fairLaunchData) {
+    return (
+      <div className="min-h-screen w-full">
+        <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 w-full">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-neutral-500 cursor-pointer"
+          >
+            <ChevronLeft size={14} />
+            Back
+          </button>
+          <LoadingState />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full">
       <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 w-full">
@@ -140,7 +152,7 @@ export default function Meme() {
                 className="bg-green-500 hover:bg-green-700 text-black font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sword className="w-5 h-5" />
-                Mint Pepe's Revenge Warriors
+                Mint {token.metadata?.name || "Token"} Warriors
               </Link>
             )}
             {/* Phase-based rendering */}
@@ -188,13 +200,12 @@ export default function Meme() {
               <CountdownTimer />
             </div>
           )}
-          {currentPhase === 3 && (
+          {/* TradeForm commented out per team lead - not needed */}
+          {/* {currentPhase === 3 && (
             <div className="w-full xl:w-[400px] flex flex-col space-y-4 sm:space-y-6">
-              <TradeForm />
-              {/*<StakeForm />*/}
-              {/*<UnstakeForm />*/}
+              <TradeForm tokenAddress={token?.address} />
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

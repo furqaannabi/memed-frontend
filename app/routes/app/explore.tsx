@@ -13,17 +13,6 @@ export { memeTokensLoader as loader };
 export default function Explore() {
   // Use the data loaded by the loader
   const { data: loadedTokens, error } = useLoaderData() as LoaderData<Token[]>;
-  
-  // Debug logging
-  console.log("=== EXPLORE TOKENS DEBUG ===");
-  console.log("Loaded tokens:", loadedTokens);
-  console.log("Number of tokens:", loadedTokens?.length);
-  if (loadedTokens && loadedTokens.length > 0) {
-    console.log("First token structure:", loadedTokens[0]);
-    console.log("First token image:", loadedTokens[0].image);
-  }
-  console.log("Error:", error);
-  console.log("=== END EXPLORE DEBUG ===");
 
   // Adapt the loaded data to the format expected by the MemeTokenCard component
   const memeTokens = (loadedTokens || []).map((token) => ({

@@ -60,21 +60,9 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   const fairLaunchStartTime = fairLaunchData ? fairLaunchData[1] : 0n;
   const fairLaunchStatus = fairLaunchData ? fairLaunchData[0] : 0;
   
-  const progressPercentage = TARGET_ETH > 0n 
+  const progressPercentage = TARGET_ETH > 0n
     ? Math.min(Number((totalCommitted * 100n) / TARGET_ETH), 100)
     : 0;
-
-  // Debug logging
-  console.log("=== LAUNCH PROGRESS DEBUG ===");
-  console.log("Token ID:", tokenId);
-  console.log("Fair Launch Data:", fairLaunchData);
-  console.log("Total Committed (raw):", totalCommitted);
-  console.log("Total Committed (ETH):", formatEther(totalCommitted));
-  console.log("Target ETH:", TARGET_ETH);
-  console.log("Progress Percentage:", progressPercentage);
-  console.log("Is Loading:", isLoading);
-  console.log("Error:", error);
-  console.log("=== END DEBUG ===");
 
   // Show network error if on wrong chain
   if (!isCorrectNetwork) {
@@ -140,8 +128,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   }
 
   if (error) {
-    console.error('Fair Launch Data Error:', error);
-    // For now, show a user-friendly message instead of crashing
+    // Show user-friendly error message instead of crashing
     return (
       <div className="bg-neutral-900 p-6 rounded-xl">
         <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
