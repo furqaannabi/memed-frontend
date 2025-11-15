@@ -1,8 +1,15 @@
 import { TargetIcon, AlertTriangle } from "lucide-react";
-import { useFairLaunchData, useGetFairLaunchStatus, useValidateFairLaunchId, useCurrentId } from "@/hooks/contracts/useMemedTokenSale";
+import {
+  useFairLaunchData,
+  useGetFairLaunchStatus,
+  useValidateFairLaunchId,
+  useCurrentId,
+  useRaiseEth,
+} from "@/hooks/contracts/useMemedTokenSale";
 import { formatEther } from "viem";
 import { useChainId, useSwitchChain } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
+import CountdownTimer from "./CountdownTimer";
 
 /**
  * Format large numbers for display with proper decimal places and compact notation
@@ -49,9 +56,11 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   // Only fetch data if ID is valid
   const { data: fairLaunchData, isLoading, error } = useFairLaunchData(tokenId);
   const { data: launchStatus } = useGetFairLaunchStatus(tokenId);
-  
-  // Calculate progress based on real data
-  const TARGET_ETH = 40n * 10n ** 18n; // 40 ETH in wei
+
+  // Get target from contract instead of hardcoding
+  // This makes the component dynamic and adaptable to contract changes
+  const { data: raiseTarget } = useRaiseEth();
+  const TARGET_ETH = raiseTarget || 40n * 10n ** 18n; // Use contract value, fallback to 40 ETH
   
   // Destructure the array response from fairLaunchData
   // [status, fairLaunchStartTime, totalCommitted, totalSold, uniswapPair, createdAt]
@@ -165,6 +174,11 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
         Launch Progress
       </h2>
 
+      {/* Countdown Timer - Shows time remaining for fair launch */}
+      <div className="mb-6">
+        <CountdownTimer tokenId={tokenId} />
+      </div>
+
       {/* Progress Bar - Updated with green theme for success/commitment tracking */}
       <div className="w-full bg-neutral-800 h-3 rounded-full mb-2">
         <div
@@ -175,7 +189,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
       <div className="flex justify-between text-sm text-neutral-400 mb-6">
         <span>{progressPercentage.toFixed(1)}% Complete ({formatTokenAmount(formatEther(totalCommitted))} ETH)</span>
         <span>
-          {formatTokenAmount(formatEther(totalCommitted))} / 40 ETH
+          {formatTokenAmount(formatEther(totalCommitted))} / {formatTokenAmount(formatEther(TARGET_ETH))} ETH
         </span>
       </div>
 

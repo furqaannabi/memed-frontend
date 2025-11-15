@@ -2,13 +2,17 @@ import MemeIntroCard from "@/components/app/meme/MemeCard";
 import SocialMediaStats from "@/components/app/meme/SocialMediaStats";
 import LaunchProgress from "@/components/app/meme/LaunchProgress";
 import CommitETHForm from "@/components/app/meme/CommitETHForm";
-import CountdownTimer from "@/components/app/meme/CountdownTimer";
 import ReadyToLaunch from "@/components/app/meme/ReadyToLaunch";
 import LoadingState from "@/components/app/meme/LoadingState";
+import ClaimTokenPanel from "@/components/app/meme/ClaimTokenPanel";
+import RefundPanel from "@/components/app/meme/RefundPanel";
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 // import TradeForm from "@/components/app/meme/TradeForm"; // Commented out - not needed per team lead
-import { useFairLaunchData } from "@/hooks/contracts/useMemedTokenSale";
+import {
+  useFairLaunchData,
+  useIsRefundable,
+} from "@/hooks/contracts/useMemedTokenSale";
 import BattleHistory from "@/components/app/meme/BattleHistory";
 import ActiveBattles from "@/components/app/meme/ActiveBattles";
 import { ChevronLeft, Sword } from "lucide-react";
@@ -26,8 +30,8 @@ export default function Meme() {
   const [active, setActive] = useState<boolean>(false);
   const [refreshKey, setRefreshKey] = useState<string>(Date.now().toString());
   console.log(token);
-  // Phase states: 1 = commitment, 2 = ready to launch, 3 = launched
-  const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3>(1);
+  // Phase states: 1 = commitment, 2 = ready to launch, 3 = launched, 4 = failed
+  const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3 | 4>(1);
 
   // Helper function to convert token ID to contract ID with error handling
   const getContractTokenId = (token: Token) => {
@@ -51,25 +55,36 @@ export default function Meme() {
   const contractTokenId = token ? getContractTokenId(token) : 0n;
 
   // Monitor fair launch status for real-time phase changes
-  const { data: fairLaunchData, isLoading: isFairLaunchLoading } = useFairLaunchData(contractTokenId);
+  const { data: fairLaunchData, isLoading: isFairLaunchLoading } =
+    useFairLaunchData(contractTokenId);
 
-  // Real-time phase monitoring - updates UI based on contract status
+  // Check if launch is refundable (failed) - important for accurate phase detection
+  const { data: isRefundable } = useIsRefundable(contractTokenId);
+
+  // Real-time phase monitoring - checks both status AND isRefundable for accurate phase detection
   useEffect(() => {
     if (fairLaunchData) {
       const status = fairLaunchData[0]; // status is at index 0
+      console.log("fair launch data", fairLaunchData, contractTokenId);
 
-      if (status === 1) {
+      // PRIORITY: Check if refundable (failed launch)
+      // This covers both explicit status 4 AND other failure conditions (time expired, etc.)
+      console.log("isRefundable", isRefundable);
+      if (isRefundable === true || status === 4) {
+        setCurrentPhase(4); // Failed launch - show RefundPanel
+        setActive(false);
+      } else if (status === 1) {
         setCurrentPhase(1); // Commitment phase
         setActive(false);
       } else if (status === 2) {
         setCurrentPhase(2); // Ready to launch phase
         setActive(false);
       } else if (status === 3) {
-        setCurrentPhase(3); // Launched phase
+        setCurrentPhase(3); // Launched phase - show ClaimPanel
         setActive(true);
       }
     }
-  }, [fairLaunchData, currentPhase]);
+  }, [fairLaunchData, isRefundable, currentPhase]);
 
   // Callback to refresh launch progress when commit succeeds
   const handleCommitSuccess = useCallback(() => {
@@ -171,6 +186,16 @@ export default function Meme() {
                 <BattleHistory />
               </>
             )}
+            {currentPhase === 4 && (
+              <div className="bg-red-500/20 border border-red-600 text-red-300 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold mb-2">❌ Launch Failed</h3>
+                <p className="text-sm">
+                  The {token.metadata?.name || "token"} launch did not reach its
+                  funding goal. All participants can claim a full refund of
+                  their committed funds.
+                </p>
+              </div>
+            )}
           </div>
           {/* Right Section: Phase-based panels */}
           {currentPhase === 1 && (
@@ -179,7 +204,6 @@ export default function Meme() {
                 tokenId={contractTokenId}
                 onCommitSuccess={handleCommitSuccess}
               />
-              <CountdownTimer />
             </div>
           )}
           {currentPhase === 2 && (
@@ -197,7 +221,6 @@ export default function Meme() {
                   </p>
                 </div>
               </div>
-              <CountdownTimer />
             </div>
           )}
           {/* TradeForm commented out per team lead - not needed */}
@@ -206,6 +229,24 @@ export default function Meme() {
               <TradeForm tokenAddress={token?.address} />
             </div>
           )} */}
+          {/* ClaimTokenPanel for successful launch (status 3) */}
+          {currentPhase === 3 && (
+            <div className="w-full xl:w-[400px] flex flex-col space-y-4 sm:space-y-6">
+              <ClaimTokenPanel
+                tokenId={contractTokenId}
+                tokenName={token.metadata?.name}
+              />
+            </div>
+          )}
+          {/* RefundPanel for failed launch (status 4) */}
+          {currentPhase === 4 && (
+            <div className="w-full xl:w-[400px] flex flex-col space-y-4 sm:space-y-6">
+              <RefundPanel
+                tokenId={contractTokenId}
+                tokenName={token.metadata?.name}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

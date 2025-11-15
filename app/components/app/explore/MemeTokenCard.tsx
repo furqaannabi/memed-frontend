@@ -1,5 +1,9 @@
-import { Flame, Timer } from "lucide-react";
+import { Flame, Timer, Rocket, XCircle } from "lucide-react";
 import { Link } from "react-router";
+import {
+  useFairLaunchData,
+  useIsRefundable,
+} from "@/hooks/contracts/useMemedTokenSale";
 
 interface MemeTokenCardProps {
   token: {
@@ -10,6 +14,7 @@ interface MemeTokenCardProps {
     marketCap: string;
     progress: number;
     image: string; // Added image prop
+    fairLaunchId?: string; // Fair launch ID for fetching contract status
     active?: boolean;
     badge?: string;
     badgeColor?: string;
@@ -17,6 +22,18 @@ interface MemeTokenCardProps {
 }
 
 export function MemeTokenCard({ token }: MemeTokenCardProps) {
+  // Convert fairLaunchId to BigInt for contract calls
+  const contractTokenId = token.fairLaunchId ? BigInt(token.fairLaunchId) : 0n;
+
+  // Get fair launch status from contract
+  const { data: fairLaunchData } = useFairLaunchData(contractTokenId);
+  const { data: isRefundable } = useIsRefundable(contractTokenId);
+
+  // Determine current phase based on contract data
+  // status: 1 = Funding, 2 = Ready, 3 = Launched, 4 = Failed
+  const status = fairLaunchData ? fairLaunchData[0] : 0;
+  const isFailed = isRefundable === true || status === 4;
+
   return (
     <Link
       to={`/explore/meme/${token.id}`}
@@ -44,13 +61,26 @@ export function MemeTokenCard({ token }: MemeTokenCardProps) {
                 Created by <span className="text-white">{token.creator}</span>
               </p>
             </div>
-            {token.active ? (
-              <span className="text-primary-500 bg-primary-900/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0">
-                Active
+            {/* Status Badge - Shows actual launch phase from contract */}
+            {isFailed ? (
+              <span className="text-red-500 bg-red-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
+                <XCircle size={12} /> Failed
+              </span>
+            ) : status === 3 ? (
+              <span className="text-green-500 bg-green-900/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
+                <Rocket size={12} /> Launched
+              </span>
+            ) : status === 2 ? (
+              <span className="text-blue-500 bg-blue-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
+                <Rocket size={12} /> Ready
+              </span>
+            ) : status === 1 ? (
+              <span className="text-yellow-500 bg-yellow-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
+                <Timer size={12} /> Funding
               </span>
             ) : (
-              <span className="text-yellow-500 bg-yellow-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 sm:gap-2 flex-nowrap items-center">
-                <Timer size={12} /> Pending
+              <span className="text-gray-500 bg-gray-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0">
+                N/A
               </span>
             )}
           </div>
@@ -62,16 +92,16 @@ export function MemeTokenCard({ token }: MemeTokenCardProps) {
             </span>
             <span
               className="text-gray-400 text-[10px] sm:text-xs truncate"
-              title={`Market Cap: ${token.marketCap} Gho`}
+              title={`Market Cap: ${token.marketCap} ETH`}
             >
               {token.active ? (
-                "13k Gho /"
+                "13k ETH /"
               ) : (
                 <span className="text-primary-500 font-semibold pr-1 sm:pr-2">
                   Mkt Cap:
                 </span>
               )}
-              <span className="text-white">{token.marketCap} Gho</span>
+              <span className="text-white">{token.marketCap} ETH</span>
             </span>
           </div>
 

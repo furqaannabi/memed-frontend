@@ -183,3 +183,139 @@ export function useCancelCommit() {
     error,
   };
 }
+
+/**
+ * Hook for the `claim` write function.
+ * Allows users to claim their tokens after a successful fair launch (status 3).
+ */
+export function useClaim() {
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+
+  type ClaimArgs = {
+    id: bigint;
+  };
+
+  const claim = (args: ClaimArgs) => {
+    writeContract({
+      address: TOKEN_SALE_ADDRESS,
+      abi: memedTokenSaleAbi,
+      functionName: "claim",
+      args: [args.id],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  return {
+    claim,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    hash,
+    error,
+  };
+}
+
+/**
+ * Hook for the `refund` write function.
+ * Allows users to get their committed funds back after a failed fair launch (status 4).
+ */
+export function useRefund() {
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+
+  type RefundArgs = {
+    id: bigint;
+  };
+
+  const refund = (args: RefundArgs) => {
+    writeContract({
+      address: TOKEN_SALE_ADDRESS,
+      abi: memedTokenSaleAbi,
+      functionName: "refund",
+      args: [args.id],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  return {
+    refund,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    hash,
+    error,
+  };
+}
+
+/**
+ * Hook to check if a fair launch is refundable (failed).
+ * Returns true if the launch failed and users can claim refunds.
+ * Polls every 5 seconds for real-time updates.
+ * @param launchId The ID of the fair launch.
+ */
+export function useIsRefundable(launchId: bigint) {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "isRefundable",
+    args: [launchId],
+    query: {
+      enabled: !!launchId && launchId >= 0n,
+      refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+    },
+  });
+}
+
+/**
+ * Hook to get the fair launch duration from contract.
+ * Returns duration in seconds (e.g., 7 days = 604800 seconds).
+ */
+export function useFairLaunchDuration() {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "FAIR_LAUNCH_DURATION",
+  });
+}
+
+/**
+ * Hook to get the ETH raise target from contract.
+ * Returns target amount in wei (e.g., 40 ETH = 40 * 10^18 wei).
+ */
+export function useRaiseEth() {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "RAISE_ETH",
+  });
+}
+
+/**
+ * Hook to check if a user is allowed to launch/mint a new token.
+ * Returns true if the user is eligible to launch a token, false otherwise.
+ *
+ * This should be checked before allowing users to fill out token launch forms
+ * to prevent them from wasting time on forms that will fail at contract level.
+ *
+ * @param userAddress - The wallet address to check eligibility for
+ * @returns Boolean indicating if user can mint/launch a token
+ */
+export function useIsMintable(userAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "isMintable",
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+      refetchInterval: 5000, // Poll every 5 seconds to catch status changes
+    },
+  });
+}

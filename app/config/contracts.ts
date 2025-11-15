@@ -6,11 +6,11 @@
 // TODO: Add addresses for other networks as needed.
 
 export const CONTRACT_ADDRESSES = {
-  factory: "0xd779CD499b11CCF692A0f655a408e370f13640f6",
-  memedBattle: "0xaBEDE18b8b77C585f21C9009188f2E7d163d6944",
-  memedBattleResolver: "0xd6c96Af324169c61F7c4D28E20d226faC170ec94",
-  memedEngageToEarn: "0x9fdd7fd21f430e8dc72bd04944f9534A8A4EF60c",
-  memedTokenSale: "0x790266D5573d0B6587CCda0Bb32bE50A0F3cfBE0",
+  factory: "0x5F6F5dE1Bc7D55F8E39ed96678c16f48556067db",
+  memedBattle: "0xC97B080C92c97c3E032867b133C7591623E43735",
+  memedBattleResolver: "0x70753723151DAE0D320dAFfc8FCfec6FABD40746",
+  memedEngageToEarn: "0xac74D22AD556435AE6626B67fA8a21E719629EF2",
+  memedTokenSale: "0xb8455B67dcADe28D169c2A178695D8959e38237c",
 } as const;
 
 // It's also useful to export them individually for direct import

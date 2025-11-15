@@ -73,3 +73,21 @@ export function useGetTokenData(tokenId: bigint) {
     },
   });
 }
+
+/**
+ * Hook to get the Warrior NFT contract address for a specific token.
+ * This calls the `getWarriorNFT` view function on the MemedFactory contract.
+ * @param tokenAddress The address of the Memed token.
+ * @returns The address of the Warrior NFT contract associated with the token.
+ */
+export function useGetWarriorNFT(tokenAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: FACTORY_ADDRESS,
+    abi: factoryAbi,
+    functionName: "getWarriorNFT",
+    args: tokenAddress ? [tokenAddress] : undefined,
+    query: {
+      enabled: !!tokenAddress,
+    },
+  });
+}

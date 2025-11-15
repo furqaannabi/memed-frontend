@@ -1,126 +1,86 @@
 import {
-  useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useAccount,
 } from "wagmi";
-import { memedTokenAbi } from "@/abi/memedToken";
-
-// Note: MemedToken is a dynamic contract, so its address is not fixed.
-// The address will be passed dynamically to the hooks.
+import { erc20Abi } from "viem";
 
 /**
- * Hook to read the balance of a specific MemedToken for an account.
- * @param tokenAddress The address of the MemedToken contract.
- * @param accountAddress The address of the account to query.
+ * Hook to get user's balance of claimed tokens (MEME).
+ * These are the tokens users received from the fair launch.
+ * They use these tokens to pay for minting warrior NFTs.
+ *
+ * @param tokenAddress The claimed token (MEME) contract address
+ * @returns User's token balance in wei
  */
-export function useMemedTokenBalance(
-  tokenAddress: `0x${string}`,
-  accountAddress?: `0x${string}`,
-) {
-  const { address: connectedAddress } = useAccount();
-  const addressToQuery = accountAddress || connectedAddress;
+export function useMemedTokenBalance(tokenAddress: `0x${string}` | undefined) {
+  const { address } = useAccount();
 
   return useReadContract({
     address: tokenAddress,
-    abi: memedTokenAbi,
+    abi: erc20Abi,
     functionName: "balanceOf",
-    args: [addressToQuery ?? "0x0000000000000000000000000000000000000000"],
+    args: address ? [address] : undefined,
     query: {
-      enabled: !!tokenAddress && !!addressToQuery,
+      enabled: !!tokenAddress && !!address,
+      refetchInterval: 5000, // Poll for balance updates
     },
   });
 }
 
 /**
- * Hook to read the allowance of a spender for a specific MemedToken.
- * @param tokenAddress The address of the MemedToken contract.
- * @param ownerAddress The address of the token owner.
- * @param spenderAddress The address of the spender.
+ * Hook to check current allowance for warrior NFT contract.
+ * Allowance determines how many tokens the NFT contract can spend on user's behalf.
+ * User must approve before minting if allowance < mint price.
+ *
+ * @param tokenAddress The claimed token (MEME) contract address
+ * @param spender The warrior NFT contract address
+ * @returns Current allowance amount in wei
  */
 export function useMemedTokenAllowance(
-  tokenAddress: `0x${string}`,
-  ownerAddress: `0x${string}`,
-  spenderAddress: `0x${string}`,
+  tokenAddress: `0x${string}` | undefined,
+  spender: `0x${string}` | undefined
 ) {
+  const { address } = useAccount();
+
   return useReadContract({
     address: tokenAddress,
-    abi: memedTokenAbi,
+    abi: erc20Abi,
     functionName: "allowance",
-    args: [ownerAddress, spenderAddress],
+    args: address && spender ? [address, spender] : undefined,
     query: {
-      enabled: !!tokenAddress && !!ownerAddress && !!spenderAddress,
+      enabled: !!tokenAddress && !!spender && !!address,
+      refetchInterval: 5000, // Poll to catch approval confirmations
     },
   });
 }
 
 /**
- * Hook for the `approve` write function on a MemedToken contract.
+ * Hook to approve token spending for warrior NFT contract.
+ * User must approve the NFT contract to spend their claimed tokens
+ * before they can mint warriors.
+ *
+ * Approval flow:
+ * 1. User clicks "Approve" button
+ * 2. approve(nftContractAddress, mintPrice) is called
+ * 3. Wait for transaction confirmation
+ * 4. Allowance is updated
+ * 5. User can now mint
+ *
+ * @param tokenAddress The claimed token (MEME) contract address
+ * @returns Approve function and transaction states
  */
-export function useMemedTokenApprove(tokenAddress: `0x${string}`) {
+export function useMemedTokenApprove(tokenAddress: `0x${string}` | undefined) {
   const { data: hash, error, isPending, writeContract } = useWriteContract();
 
-  type ApproveArgs = {
-    spender: `0x${string}`;
-    value: bigint;
-  };
-
-  const approve = (args: ApproveArgs) => {
+  const approve = (spender: `0x${string}`, amount: bigint) => {
+    if (!tokenAddress) return;
     writeContract({
       address: tokenAddress,
-      abi: memedTokenAbi,
+      abi: erc20Abi,
       functionName: "approve",
-      args: [args.spender, args.value],
-    });
-  };
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
-
-  return { approve, isPending, isConfirming, isConfirmed, hash, error };
-}
-
-/**
- * Hook for the `transfer` write function on a MemedToken contract.
- */
-export function useMemedTokenTransfer(tokenAddress: `0x${string}`) {
-  const { data: hash, error, isPending, writeContract } = useWriteContract();
-
-  type TransferArgs = {
-    to: `0x${string}`;
-    value: bigint;
-  };
-
-  const transfer = (args: TransferArgs) => {
-    writeContract({
-      address: tokenAddress,
-      abi: memedTokenAbi,
-      functionName: "transfer",
-      args: [args.to, args.value],
-    });
-  };
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
-
-  return { transfer, isPending, isConfirming, isConfirmed, hash, error };
-}
-
-/**
- * Hook for the `claimCreatorIncentives` write function on a MemedToken contract.
- */
-export function useClaimCreatorIncentives(tokenAddress: `0x${string}`) {
-  const { data: hash, error, isPending, writeContract } = useWriteContract();
-
-  const claimCreatorIncentives = () => {
-    writeContract({
-      address: tokenAddress,
-      abi: memedTokenAbi,
-      functionName: "claimCreatorIncentives",
+      args: [spender, amount],
     });
   };
 
@@ -130,7 +90,7 @@ export function useClaimCreatorIncentives(tokenAddress: `0x${string}`) {
     });
 
   return {
-    claimCreatorIncentives,
+    approve,
     isPending,
     isConfirming,
     isConfirmed,

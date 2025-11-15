@@ -145,6 +145,20 @@ export const memedTokenSaleAbi = [
   },
   {
     inputs: [],
+    name: "FAIR_LAUNCH_COOLDOWN",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "FAIR_LAUNCH_DURATION",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "LP_ETH",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
