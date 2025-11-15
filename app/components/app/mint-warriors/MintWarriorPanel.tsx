@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Sword, CheckCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sword, CheckCircle, Loader2 } from "lucide-react";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import {
@@ -13,6 +13,25 @@ import {
   useMemedTokenAllowance,
   useMemedTokenApprove,
 } from "@/hooks/contracts/useMemedToken";
+
+/**
+ * Flow states for the unified mint transaction flow
+ * - idle: Ready to start
+ * - checking-allowance: Checking if approval is needed
+ * - approving: Approval transaction in progress
+ * - approved: Approval confirmed, about to mint
+ * - minting: Mint transaction in progress
+ * - completed: Mint successful
+ * - error: Something went wrong
+ */
+type FlowState =
+  | "idle"
+  | "checking-allowance"
+  | "approving"
+  | "approved"
+  | "minting"
+  | "completed"
+  | "error";
 
 interface MintWarriorPanelProps {
   warriorNFTAddress: `0x${string}` | undefined;
@@ -35,6 +54,9 @@ export default function MintWarriorPanel({
 }: MintWarriorPanelProps) {
   const { address: userAddress } = useAccount();
 
+  // State machine to track the unified transaction flow
+  const [flowState, setFlowState] = useState<FlowState>("idle");
+
   // Get current mint price from warrior NFT contract
   const {
     data: currentPrice,
@@ -44,10 +66,8 @@ export default function MintWarriorPanel({
   } = useGetCurrentPrice(warriorNFTAddress);
 
   // Get payment token address (claimed MEME tokens)
-  const {
-    data: paymentTokenAddress,
-    error: tokenAddressError,
-  } = useGetMemedToken(warriorNFTAddress);
+  const { data: paymentTokenAddress, error: tokenAddressError } =
+    useGetMemedToken(warriorNFTAddress);
 
   // Get user's claimed token balance
   const {
@@ -88,38 +108,77 @@ export default function MintWarriorPanel({
     error: mintError,
   } = useMintWarrior(warriorNFTAddress);
 
-  // Refetch data after approval confirmation
+  // Auto-progress: After approval confirms, wait for allowance update then auto-mint
   useEffect(() => {
-    if (isApproveConfirmed) {
-      refetchAllowance();
-    }
-  }, [isApproveConfirmed, refetchAllowance]);
+    if (isApproveConfirmed && flowState === "approving") {
+      setFlowState("approved");
 
-  // Refetch data after mint confirmation
+      // Wait for allowance to update on blockchain
+      setTimeout(() => {
+        refetchAllowance().then(() => {
+          // Automatically trigger mint after approval
+          if (currentPrice) {
+            mintWarrior();
+            setFlowState("minting");
+          }
+        });
+      }, 1000); // 1 second delay to ensure blockchain state is updated
+    }
+  }, [
+    isApproveConfirmed,
+    flowState,
+    refetchAllowance,
+    mintWarrior,
+    currentPrice,
+  ]);
+
+  // Handle mint completion - refetch data and show success
   useEffect(() => {
-    if (isMintConfirmed) {
+    if (isMintConfirmed && flowState === "minting") {
+      setFlowState("completed");
+
+      // Refetch all data to show updated balances
       refetchPrice();
       refetchBalance();
       refetchNftBalance();
       refetchAllowance();
+
+      // Reset to idle after showing success for 2 seconds
+      setTimeout(() => {
+        setFlowState("idle");
+      }, 2000);
     }
   }, [
     isMintConfirmed,
+    flowState,
     refetchPrice,
     refetchBalance,
     refetchNftBalance,
     refetchAllowance,
   ]);
 
-  // Handle approve button click
-  const handleApprove = () => {
+  /**
+   * Unified mint handler - single click orchestrates entire flow
+   * 1. Checks allowance
+   * 2. If insufficient, triggers approve first
+   * 3. Auto-progresses to mint after approval (via useEffect)
+   * 4. If sufficient, mints directly
+   */
+  const handleMintClick = () => {
     if (!warriorNFTAddress || !currentPrice) return;
-    approve(warriorNFTAddress, currentPrice);
-  };
 
-  // Handle mint button click
-  const handleMint = () => {
-    mintWarrior();
+    setFlowState("checking-allowance");
+
+    // Check if we have enough allowance
+    if (allowance !== undefined && allowance >= currentPrice) {
+      // Sufficient allowance - mint directly
+      mintWarrior();
+      setFlowState("minting");
+    } else {
+      // Insufficient allowance - trigger approve first
+      approve(warriorNFTAddress, currentPrice);
+      setFlowState("approving");
+    }
   };
 
   // Check if user has enough balance
@@ -128,11 +187,67 @@ export default function MintWarriorPanel({
     currentPrice !== undefined &&
     userBalance >= currentPrice;
 
-  // Check if user has approved enough allowance
-  const hasEnoughAllowance =
-    allowance !== undefined &&
-    currentPrice !== undefined &&
-    allowance >= currentPrice;
+  // Handle errors - reset to error state
+  useEffect(() => {
+    if ((approveError || mintError) && flowState !== "idle") {
+      setFlowState("error");
+    }
+  }, [approveError, mintError, flowState]);
+
+  /**
+   * Get button text based on current flow state
+   */
+  const getButtonText = () => {
+    switch (flowState) {
+      case "checking-allowance":
+        return "Checking allowance...";
+      case "approving":
+        return "Approving...";
+      case "approved":
+        return "Approved! Minting...";
+      case "minting":
+        return "Minting...";
+      case "completed":
+        return "Minted!";
+      case "error":
+        return "Try Again";
+      default:
+        return `Mint ${tokenName} Warrior`;
+    }
+  };
+
+  // Check if button should be disabled
+  const isButtonDisabled =
+    !hasEnoughBalance ||
+    !currentPrice ||
+    flowState === "checking-allowance" ||
+    flowState === "approving" ||
+    flowState === "approved" ||
+    flowState === "minting" ||
+    flowState === "completed";
+
+  // Helper function to format token amounts nicely
+  const formatTokenAmount = (value: string): string => {
+    const num = parseFloat(value);
+
+    // Handle zero and very small numbers
+    if (num === 0) return "0";
+    if (num < 0.01) return "<0.01";
+
+    // For large numbers, use compact notation
+    if (num >= 1_000_000) {
+      return `${(num / 1_000_000).toFixed(2)}M`;
+    }
+    if (num >= 1_000) {
+      return `${(num / 1_000).toFixed(2)}K`;
+    }
+
+    // For smaller numbers, limit to 4 decimal places and add commas
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    }).format(num);
+  };
 
   return (
     <div className="bg-neutral-900 rounded-lg p-6 border border-neutral-800 sticky top-8">
@@ -154,38 +269,32 @@ export default function MintWarriorPanel({
 
       {/* Price Details */}
       <div className="space-y-3 mb-6">
-        <div className="flex justify-between">
-          <span className="text-gray-400">Current Price:</span>
-          <span className="text-white font-medium">
-            {currentPrice
-              ? `${formatEther(currentPrice)} ${tokenName}`
-              : "Loading..."}
+        <div className="flex justify-between items-baseline">
+          <span className="text-gray-400 text-sm">Current Price:</span>
+          <span className="text-white font-semibold text-lg">
+            {currentPrice ? (
+              `${formatTokenAmount(formatEther(currentPrice))} ${tokenName}`
+            ) : (
+              <Loader2 className="w-4 h-4 animate-spin inline" />
+            )}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">Your Balance:</span>
-          <span className="text-white font-medium">
-            {userBalance !== undefined
-              ? `${formatEther(userBalance)} ${tokenName}`
-              : "Loading..."}
+        <div className="flex justify-between items-baseline">
+          <span className="text-gray-400 text-sm">Your Balance:</span>
+          <span className="text-green-400 font-semibold text-lg">
+            {userBalance !== undefined ? (
+              `${formatTokenAmount(formatEther(userBalance))} ${tokenName}`
+            ) : (
+              <Loader2 className="w-4 h-4 animate-spin inline" />
+            )}
           </span>
         </div>
         {!hasEnoughBalance && userBalance !== undefined && (
-          <div className="text-red-400 text-sm">
+          <div className="bg-red-500/10 border border-red-500 text-red-400 p-2 rounded text-sm">
             ⚠️ Insufficient balance to mint
           </div>
         )}
       </div>
-
-      {/* Approve Success Message */}
-      {isApproveConfirmed && !hasEnoughAllowance && (
-        <div className="bg-green-500/10 border border-green-500 text-green-400 p-3 rounded-lg mb-4 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm">
-            Approval confirmed! Allowance will update shortly...
-          </span>
-        </div>
-      )}
 
       {/* Mint Success Message */}
       {isMintConfirmed && (
@@ -199,16 +308,22 @@ export default function MintWarriorPanel({
 
       {/* Error Messages */}
       {/* Combine read errors into one user-friendly message */}
-      {(priceError || tokenAddressError || balanceError || nftBalanceError || allowanceError) && (
+      {(priceError ||
+        tokenAddressError ||
+        balanceError ||
+        nftBalanceError ||
+        allowanceError) && (
         <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg mb-4 text-sm">
-          ⚠️ Unable to load minting information. Please check your connection and try again.
+          ⚠️ Unable to load minting information. Please check your connection
+          and try again.
         </div>
       )}
 
       {/* Write contract errors - simplified user-friendly messages */}
       {approveError && (
         <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg mb-4 text-sm">
-          {approveError.message.includes("rejected") || approveError.message.includes("denied")
+          {approveError.message.includes("rejected") ||
+          approveError.message.includes("denied")
             ? "❌ Transaction was cancelled"
             : approveError.message.includes("insufficient")
             ? "❌ Insufficient funds for transaction"
@@ -217,7 +332,8 @@ export default function MintWarriorPanel({
       )}
       {mintError && (
         <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg mb-4 text-sm">
-          {mintError.message.includes("rejected") || mintError.message.includes("denied")
+          {mintError.message.includes("rejected") ||
+          mintError.message.includes("denied")
             ? "❌ Transaction was cancelled"
             : mintError.message.includes("insufficient")
             ? "❌ Insufficient funds to mint"
@@ -225,50 +341,22 @@ export default function MintWarriorPanel({
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Single Unified Mint Button */}
       <div className="space-y-3">
-        {/* Show Approve button if allowance is insufficient */}
-        {!hasEnoughAllowance && (
-          <button
-            onClick={handleApprove}
-            disabled={
-              !hasEnoughBalance ||
-              isApprovePending ||
-              isApproveConfirming ||
-              !currentPrice
+        <button
+          onClick={() => {
+            // Reset error state on retry
+            if (flowState === "error") {
+              setFlowState("idle");
             }
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-          >
-            {isApprovePending || isApproveConfirming
-              ? "Approving..."
-              : `Approve ${currentPrice ? formatEther(currentPrice) : "..."} ${tokenName}`}
-          </button>
-        )}
-
-        {/* Show Mint button if allowance is sufficient */}
-        {hasEnoughAllowance && (
-          <button
-            onClick={handleMint}
-            disabled={
-              !hasEnoughBalance || isMintPending || isMintConfirming || !currentPrice
-            }
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            <Sword className="w-5 h-5" />
-            {isMintPending || isMintConfirming
-              ? "Minting..."
-              : `Mint ${tokenName} Warrior`}
-          </button>
-        )}
-      </div>
-
-      {/* Info Note */}
-      <div className="mt-4 text-xs text-neutral-400">
-        <p>
-          💡 Minting requires two transactions: first approve token spending,
-          then mint your warrior NFT.
-        </p>
-        <p className="mt-1">⚡ Price increases with each mint.</p>
+            handleMintClick();
+          }}
+          disabled={isButtonDisabled}
+          className="w-full cursor-pointer bg-green-600 hover:bg-green-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <Sword className="w-5 h-5" />
+          {getButtonText()}
+        </button>
       </div>
     </div>
   );

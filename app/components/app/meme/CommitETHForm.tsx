@@ -16,6 +16,25 @@ import {
 } from "@/hooks/contracts/usePaymentToken";
 
 /**
+ * Flow states for the unified commit transaction flow
+ * - idle: Ready to start
+ * - checking-allowance: Checking if approval is needed
+ * - approving: Approval transaction in progress
+ * - approved: Approval confirmed, about to commit
+ * - committing: Commit transaction in progress
+ * - completed: Commit successful
+ * - error: Something went wrong
+ */
+type FlowState =
+  | "idle"
+  | "checking-allowance"
+  | "approving"
+  | "approved"
+  | "committing"
+  | "completed"
+  | "error";
+
+/**
  * Format large numbers for display with proper decimal places and compact notation
  * @param value - The number value as a string (from formatEther)
  * @returns Formatted string with appropriate precision
@@ -66,6 +85,9 @@ interface CommitETHFormProps {
 const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [calculatedTokens, setCalculatedTokens] = useState("");
+
+  // State machine to track the unified transaction flow
+  const [flowState, setFlowState] = useState<FlowState>("idle");
 
   const { address } = useAccount();
 
@@ -135,19 +157,42 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
     }
   }, [paymentTokenAmountAsBigInt, calculateMemeTokensFromPaymentToken]);
 
-  // Refetch allowance after approval confirmation
+  // Auto-progress: After approval confirms, wait for allowance update then auto-commit
   useEffect(() => {
-    if (isApprovalConfirmed) {
-      refetchAllowance();
+    if (isApprovalConfirmed && flowState === "approving") {
+      setFlowState("approved");
+
+      // Wait for allowance to update on blockchain
+      setTimeout(() => {
+        refetchAllowance().then(() => {
+          // Automatically trigger commit after approval
+          if (paymentTokenAmountAsBigInt > 0n) {
+            commitToFairLaunch({
+              launchId: tokenId,
+              amount: paymentTokenAmountAsBigInt,
+            });
+            setFlowState("committing");
+          }
+        });
+      }, 1000); // 1 second delay to ensure blockchain state is updated
     }
-  }, [isApprovalConfirmed, refetchAllowance]);
+  }, [
+    isApprovalConfirmed,
+    flowState,
+    refetchAllowance,
+    commitToFairLaunch,
+    tokenId,
+    paymentTokenAmountAsBigInt,
+  ]);
 
   // State for success message
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
-  // Handle form reset and success message when commit is confirmed
+  // Handle commit completion - reset form and show success
   useEffect(() => {
-    if (isCommitConfirmed) {
+    if (isCommitConfirmed && flowState === "committing") {
+      setFlowState("completed");
+
       // Clear form inputs
       setPaymentAmount("");
       setCalculatedTokens("");
@@ -162,27 +207,46 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
 
       // Refresh data to show updated progress
       refetchAllowance();
-      // Note: userCommitment will automatically refresh due to the hook dependency
 
       // Notify parent component to refresh
       onCommitSuccess?.();
 
+      // Reset flow state to idle after 2 seconds
+      setTimeout(() => {
+        setFlowState("idle");
+      }, 2000);
+
       return () => clearTimeout(timer);
     }
-  }, [isCommitConfirmed, refetchAllowance, onCommitSuccess]);
+  }, [isCommitConfirmed, flowState, refetchAllowance, onCommitSuccess]);
 
-  const handleApprove = () => {
-    if (paymentTokenAmountAsBigInt > 0n) {
-      approveToken(paymentTokenAmountAsBigInt);
-    }
-  };
+  /**
+   * Unified commit handler - single click orchestrates entire flow
+   * 1. Checks allowance
+   * 2. If insufficient, triggers approve first
+   * 3. Auto-progresses to commit after approval (via useEffect)
+   * 4. If sufficient, commits directly
+   */
+  const handleCommitClick = () => {
+    if (paymentTokenAmountAsBigInt === 0n) return;
 
-  const handleCommit = () => {
-    if (paymentTokenAmountAsBigInt > 0n) {
+    setFlowState("checking-allowance");
+
+    // Check if we have enough allowance
+    if (
+      tokenAllowance !== undefined &&
+      tokenAllowance >= paymentTokenAmountAsBigInt
+    ) {
+      // Sufficient allowance - commit directly
       commitToFairLaunch({
         launchId: tokenId,
         amount: paymentTokenAmountAsBigInt,
       });
+      setFlowState("committing");
+    } else {
+      // Insufficient allowance - trigger approve first
+      approveToken(paymentTokenAmountAsBigInt);
+      setFlowState("approving");
     }
   };
 
@@ -197,15 +261,6 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
   const requiredAmount = useMemo(
     () => paymentTokenAmountAsBigInt,
     [paymentTokenAmountAsBigInt]
-  );
-
-  // Check if user has enough allowance - memoized for performance
-  const hasEnoughAllowance = useMemo(
-    () =>
-      tokenAllowance && requiredAmount > 0n
-        ? tokenAllowance >= requiredAmount
-        : false,
-    [tokenAllowance, requiredAmount]
   );
 
   // Check if user has enough balance - memoized for performance
@@ -241,6 +296,39 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
       isConfirmingApproval,
     ]
   );
+
+  /**
+   * Get button text based on current flow state
+   */
+  const getCommitButtonText = () => {
+    switch (flowState) {
+      case "checking-allowance":
+        return "Checking allowance...";
+      case "approving":
+        return "Approving...";
+      case "approved":
+        return "Approved! Committing...";
+      case "committing":
+        return "Committing...";
+      case "completed":
+        return "Committed!";
+      case "error":
+        return "Try Again";
+      default:
+        return "Commit";
+    }
+  };
+
+  // Check if commit button should be disabled
+  const isCommitButtonDisabled =
+    !isCommitValid ||
+    !address ||
+    !hasEnoughBalance ||
+    flowState === "checking-allowance" ||
+    flowState === "approving" ||
+    flowState === "approved" ||
+    flowState === "committing" ||
+    flowState === "completed";
 
   return (
     <div className="bg-neutral-900 p-6 rounded-xl w-full space-y-4">
@@ -364,41 +452,20 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
         </div>
       )}
 
-      {/* Approval/Commit Buttons */}
-      {!hasEnoughAllowance && isCommitValid ? (
-        <button
-          onClick={handleApprove}
-          disabled={
-            !isCommitValid || isTransacting || !address || !hasEnoughBalance
+      {/* Single Unified Commit Button */}
+      <button
+        onClick={() => {
+          // Reset error state on retry
+          if (flowState === "error") {
+            setFlowState("idle");
           }
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-md transition disabled:bg-neutral-600 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-        >
-          <CheckCircle size={16} />
-          {isApproving || isConfirmingApproval
-            ? "Approving..."
-            : !address
-            ? "Connect Wallet"
-            : `Approve ${tokenSymbol || "TOKEN"}`}
-        </button>
-      ) : (
-        <button
-          onClick={handleCommit}
-          disabled={
-            !isCommitValid ||
-            isTransacting ||
-            !address ||
-            !hasEnoughBalance ||
-            !hasEnoughAllowance
-          }
-          className="w-full bg-green-500 hover:bg-green-600 text-black font-medium py-2 rounded-md transition disabled:bg-neutral-600 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {isCommitting || isConfirmingCommit
-            ? "Committing..."
-            : !address
-            ? "Connect Wallet"
-            : "Commit"}
-        </button>
-      )}
+          handleCommitClick();
+        }}
+        disabled={isCommitButtonDisabled}
+        className="w-full bg-green-500 hover:bg-green-600 text-black font-medium py-2 rounded-md transition disabled:bg-neutral-600 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {!address ? "Connect Wallet" : getCommitButtonText()}
+      </button>
 
       {/* Warning Box */}
       <div className="bg-yellow-500/20 border border-yellow-600 text-yellow-300 text-sm p-3 rounded-md">
@@ -415,8 +482,8 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
           </div>
           <div>• Tokens can be claimed once the fair launch reaches target</div>
           <div>
-            • You must first approve the contract to spend your{" "}
-            {tokenSymbol || "TOKEN"}
+            • Click once to commit - if needed, you'll be prompted to approve
+            first, then commitment happens automatically
           </div>
         </div>
       </div>
