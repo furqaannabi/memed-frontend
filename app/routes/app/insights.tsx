@@ -60,11 +60,11 @@ export default function MyInsights() {
                   <div className="text-xs text-green-500">≈ $5.67</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-500 mb-1">
+                  <div className="text-2xl font-bold text-neutral-300 mb-1">
                     420
                   </div>
                   <div className="text-sm text-gray-400 mb-1">Staked MEME</div>
-                  <div className="text-xs text-blue-500">≈ $5.67</div>
+                  <div className="text-xs text-neutral-400">≈ $5.67</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-white mb-1">111</div>
@@ -120,7 +120,7 @@ export default function MyInsights() {
           <div>
             <div className="bg-neutral-900 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-6">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
+                <TrendingUp className="w-5 h-5 text-neutral-400" />
                 <h2 className="text-xl font-semibold text-white">
                   Performance
                 </h2>
@@ -146,7 +146,7 @@ export default function MyInsights() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Win Rate</span>
-                  <span className="text-purple-500 font-semibold text-xl">
+                  <span className="text-white font-semibold text-xl">
                     80%
                   </span>
                 </div>

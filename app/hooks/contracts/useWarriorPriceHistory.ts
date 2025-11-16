@@ -146,7 +146,15 @@ export function useWarriorPriceHistory(
       }
     };
 
+    // Initial fetch
     fetchPriceHistory();
+
+    // Set up periodic refetch every 30 seconds to show new mints
+    // 30s is a good balance: frequent enough for fresh data, not too expensive for RPC
+    const intervalId = setInterval(fetchPriceHistory, 30000);
+
+    // Cleanup interval on unmount or dependency change
+    return () => clearInterval(intervalId);
   }, [nftAddress, publicClient, maxBlocksBack]);
 
   return { priceHistory, isLoading, error };

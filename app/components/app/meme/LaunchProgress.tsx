@@ -93,7 +93,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
           </div>
           <button
             onClick={() => switchChain?.({ chainId: baseSepolia.id })}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-neutral-700 cursor-pointer"
           >
             Switch to Base Sepolia
           </button>
@@ -202,7 +202,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
           <div className="text-sm text-neutral-400">Tokens Sold</div>
         </div>
         <div className="bg-neutral-800 rounded-lg p-4 text-center">
-          <div className="text-blue-400 text-2xl font-semibold">
+          <div className="text-white text-2xl font-semibold">
             {totalCommitted > 0n
               ? `${formatTokenAmount(formatEther(totalCommitted))} ETH`
               : "0 ETH"

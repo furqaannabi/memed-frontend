@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlameIcon, Share2Icon } from "lucide-react";
+import { FlameIcon, Share2Icon, Copy, Check, User } from "lucide-react";
 import type { Token } from "@/hooks/api/useAuth"; // Re-added Token import
 import meme from "@/assets/images/meme.png"; // Fallback placeholder image
 
@@ -9,6 +9,7 @@ interface MemeIntroCardProps {
 
 const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Safely extract image URL with multiple fallback options to prevent undefined access errors
   // Priority: 1) token.image.s3Key, 2) token.metadata?.imageKey, 3) placeholder image
@@ -18,6 +19,18 @@ const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
   const tokenName = token.metadata?.name || "Unnamed Token";
   const tokenDescription =
     token.metadata?.description || "No description provided.";
+
+  // Copy address to clipboard with visual feedback
+  const handleCopyAddress = async (address: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(type);
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopiedAddress(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy address:", err);
+    }
+  };
 
   return (
     <div className="bg-neutral-900 text-white p-4 rounded-xl  mx-auto">
@@ -46,22 +59,62 @@ const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
             <h1 className="text-2xl md:text-3xl font-semibold">{tokenName}</h1>
           </div>
 
-          {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400 mb-3">
-            <span className="text-green-400 font-medium">
-              {/* Display token contract address if deployed, otherwise fallback to user ID */}
-              {token.address
-                ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}`
-                : ``}
-            </span>
-            <span className="w-1 h-1 bg-neutral-600 rounded-full" />
-            <span>
-              {/* Safely access createdAt with fallback and error handling */}
-              Created{" "}
-              {token.createdAt
-                ? new Date(token.createdAt).toLocaleDateString()
-                : "Unknown date"}
-            </span>
+          {/* Meta Info - Token & Creator Addresses */}
+          <div className="flex flex-col gap-2 text-sm mb-3">
+            {/* Token Contract Address */}
+            {token.address && (
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-500 min-w-[80px]">Token:</span>
+                <code className="text-green-400 font-mono text-xs bg-neutral-800 px-2 py-1 rounded">
+                  {token.address.slice(0, 10)}...{token.address.slice(-8)}
+                </code>
+                <button
+                  onClick={() => handleCopyAddress(token.address!, "contract")}
+                  className="p-1 hover:bg-neutral-800 rounded transition-colors cursor-pointer"
+                  title="Copy contract address"
+                >
+                  {copiedAddress === "contract" ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-neutral-400" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Creator Address */}
+            {token.userId && (
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-500 min-w-[80px] flex items-center gap-1">
+                  {/*<User className="w-3 h-3" />*/}
+                  Creator:
+                </span>
+                <code className="text-neutral-400 font-mono text-xs bg-neutral-800 px-2 py-1 rounded">
+                  {token.userId.slice(0, 10)}...{token.userId.slice(-8)}
+                </code>
+                <button
+                  onClick={() => handleCopyAddress(token.userId!, "creator")}
+                  className="p-1 hover:bg-neutral-800 rounded transition-colors cursor-pointer"
+                  title="Copy creator address"
+                >
+                  {copiedAddress === "creator" ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-neutral-400" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Creation Date */}
+            <div className="flex items-center gap-2 text-neutral-500">
+              <span className="min-w-[80px]">Created:</span>
+              <span>
+                {token.createdAt
+                  ? new Date(token.createdAt).toLocaleDateString()
+                  : "Unknown date"}
+              </span>
+            </div>
           </div>
 
           {/* Description - Display actual token description from metadata */}

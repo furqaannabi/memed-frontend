@@ -117,6 +117,31 @@ export function useUserActiveNfts(
     args: [addressToQuery ?? "0x0000000000000000000000000000000000000000"],
     query: {
       enabled: !!nftAddress && !!addressToQuery,
+      refetchInterval: 5000, // Refetch every 5 seconds for live updates
+    },
+  });
+}
+
+/**
+ * Hook to check if a user has any active (non-allocated) warriors.
+ * @param nftAddress The address of the MemedWarriorNFT contract.
+ * @param userAddress The address of the user to query.
+ */
+export function useHasActiveWarrior(
+  nftAddress: `0x${string}`,
+  userAddress?: `0x${string}`,
+) {
+  const { address: connectedAddress } = useAccount();
+  const addressToQuery = userAddress || connectedAddress;
+
+  return useReadContract({
+    address: nftAddress,
+    abi: memedWarriorNFTAbi,
+    functionName: "hasActiveWarrior",
+    args: [addressToQuery ?? "0x0000000000000000000000000000000000000000"],
+    query: {
+      enabled: !!nftAddress && !!addressToQuery,
+      refetchInterval: 5000,
     },
   });
 }

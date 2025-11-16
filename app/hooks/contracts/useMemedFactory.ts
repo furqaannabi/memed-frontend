@@ -91,3 +91,24 @@ export function useGetWarriorNFT(tokenAddress: `0x${string}` | undefined) {
     },
   });
 }
+
+/**
+ * Hook to get the Heat score for a specific token.
+ * Heat is the platform's success metric that unlocks creator incentives.
+ * Formula: Every 100,000 Heat unlocks 2,000,000 tokens (Max 5,000,000/Day)
+ *
+ * @param tokenAddress The address of the Memed token.
+ * @returns The current Heat score for the token.
+ */
+export function useTokenHeat(tokenAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: FACTORY_ADDRESS,
+    abi: factoryAbi,
+    functionName: "getHeat",
+    args: tokenAddress ? [tokenAddress] : undefined,
+    query: {
+      enabled: !!tokenAddress,
+      refetchInterval: 30000, // Refetch every 30 seconds for live Heat updates
+    },
+  });
+}

@@ -8,27 +8,21 @@ import { ENGAGE_TO_EARN_ADDRESS } from "@/config/contracts";
 import { memedEngageToEarnAbi } from "@/abi";
 
 /**
- * Hook to read a user's engagement reward for a specific token.
- * @param tokenAddress The address of the token.
- * @param userAddress The address of the user (optional, defaults to connected wallet).
+ * Hook to read a user's engagement rewards.
+ * Returns all claimable rewards for the connected wallet (msg.sender).
+ * No parameters needed - contract uses msg.sender internally.
  */
-export function useGetUserEngagementReward(
-  tokenAddress: `0x${string}`,
-  userAddress?: `0x${string}`,
-) {
-  const { address: connectedAddress } = useAccount();
-  const addressToQuery = userAddress || connectedAddress;
+export function useGetUserEngagementReward() {
+  const { address } = useAccount();
 
   return useReadContract({
     address: ENGAGE_TO_EARN_ADDRESS,
     abi: memedEngageToEarnAbi,
     functionName: "getUserEngagementReward",
-    args: [
-      addressToQuery ?? "0x0000000000000000000000000000000000000000",
-      tokenAddress,
-    ],
+    args: [], // No arguments - uses msg.sender
     query: {
-      enabled: !!tokenAddress && !!addressToQuery,
+      enabled: !!address, // Only fetch when wallet is connected
+      refetchInterval: 5000, // Refetch every 5 seconds
     },
   });
 }
@@ -85,6 +79,106 @@ export function useClaimEngagementReward() {
 
   return {
     claimEngagementReward,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    hash,
+    error,
+  };
+}
+
+// ============================================================================
+// CREATOR INCENTIVE HOOKS
+// ============================================================================
+
+/**
+ * Hook to read creator data for a specific token
+ * Returns creator address, balance, and unlocked balance
+ * @param tokenAddress The address of the token
+ */
+export function useCreatorData(tokenAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: ENGAGE_TO_EARN_ADDRESS,
+    abi: memedEngageToEarnAbi,
+    functionName: "creatorData",
+    args: tokenAddress ? [tokenAddress] : undefined,
+    query: {
+      enabled: !!tokenAddress,
+      refetchInterval: 5000, // Refetch every 5 seconds
+    },
+  });
+}
+
+/**
+ * Hook to check if a token creator can claim rewards
+ * @param tokenAddress The address of the token
+ */
+export function useIsCreatorRewardable(
+  tokenAddress: `0x${string}` | undefined
+) {
+  return useReadContract({
+    address: ENGAGE_TO_EARN_ADDRESS,
+    abi: memedEngageToEarnAbi,
+    functionName: "isCreatorRewardable",
+    args: tokenAddress ? [tokenAddress] : undefined,
+    query: {
+      enabled: !!tokenAddress,
+    },
+  });
+}
+
+/**
+ * Hook for unlocking creator incentives for a token
+ */
+export function useUnlockCreatorIncentives() {
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+
+  const unlockCreatorIncentives = (tokenAddress: `0x${string}`) => {
+    writeContract({
+      address: ENGAGE_TO_EARN_ADDRESS,
+      abi: memedEngageToEarnAbi,
+      functionName: "unlockCreatorIncentives",
+      args: [tokenAddress],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  return {
+    unlockCreatorIncentives,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    hash,
+    error,
+  };
+}
+
+/**
+ * Hook for claiming creator incentives for a token
+ */
+export function useClaimCreatorIncentives() {
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+
+  const claimCreatorIncentives = (tokenAddress: `0x${string}`) => {
+    writeContract({
+      address: ENGAGE_TO_EARN_ADDRESS,
+      abi: memedEngageToEarnAbi,
+      functionName: "claimCreatorIncentives",
+      args: [tokenAddress],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  return {
+    claimCreatorIncentives,
     isPending,
     isConfirming,
     isConfirmed,

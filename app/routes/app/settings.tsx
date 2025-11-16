@@ -115,7 +115,7 @@ export default function Settings() {
                   <h3 className="font-semibold text-white">Network</h3>
                   <p className="text-gray-400 text-sm">Lens Mainnet</p>
                 </div>
-                <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                <div className="bg-green-600 text-black px-3 py-1 rounded-full text-xs font-medium">
                   Active
                 </div>
               </div>

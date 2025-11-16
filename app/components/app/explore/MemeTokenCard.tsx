@@ -86,7 +86,7 @@ export function MemeTokenCard({ token }: MemeTokenCardProps) {
                 <Rocket size={12} /> Launched
               </span>
             ) : status === 2 ? (
-              <span className="text-blue-500 bg-blue-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
+              <span className="text-neutral-300 bg-neutral-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
                 <Rocket size={12} /> Ready
               </span>
             ) : status === 1 ? (

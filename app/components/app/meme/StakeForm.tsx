@@ -50,13 +50,13 @@ const StakeForm = () => {
       </button>
 
       {/* Info Box */}
-      <div className="bg-blue-500/20 border border-blue-600 text-blue-300 text-sm p-3 rounded-md ">
+      <div className="bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm p-3 rounded-md ">
         <span className="flex items-center ">
           {" "}
           <Lightbulb size={20} /> Meme-Specific Staking
         </span>
 
-        <span className="text-xs text-blue-300">
+        <span className="text-xs text-neutral-400">
           Earn higher rewards by staking on trending memes. APR increases with
           meme popularity!
         </span>

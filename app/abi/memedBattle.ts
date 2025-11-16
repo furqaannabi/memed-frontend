@@ -1,36 +1,16 @@
 export const memedBattleAbi = [
+  { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
-    inputs: [],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "owner", type: "address" }],
     name: "OwnableInvalidOwner",
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
     name: "OwnableUnauthorizedAccount",
     type: "error",
   },
-  {
-    inputs: [],
-    name: "ReentrancyGuardReentrantCall",
-    type: "error",
-  },
+  { inputs: [], name: "ReentrancyGuardReentrantCall", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -240,18 +220,8 @@ export const memedBattleAbi = [
   {
     anonymous: false,
     inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "from",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "to",
-        type: "address",
-      },
+      { indexed: true, internalType: "address", name: "from", type: "address" },
+      { indexed: true, internalType: "address", name: "to", type: "address" },
       {
         indexed: false,
         internalType: "uint256",
@@ -302,24 +272,19 @@ export const memedBattleAbi = [
   {
     inputs: [],
     name: "BATTLE_COOLDOWN",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-    ],
+    inputs: [],
+    name: "BATTLE_DURATION",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_battleId", type: "uint256" }],
     name: "acceptBattle",
     outputs: [],
     stateMutability: "nonpayable",
@@ -327,26 +292,10 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_user",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_supportedMeme",
-        type: "address",
-      },
-      {
-        internalType: "uint256[]",
-        name: "_nftsIds",
-        type: "uint256[]",
-      },
+      { internalType: "uint256", name: "_battleId", type: "uint256" },
+      { internalType: "address", name: "_user", type: "address" },
+      { internalType: "address", name: "_supportedMeme", type: "address" },
+      { internalType: "uint256[]", name: "_nftsIds", type: "uint256[]" },
     ],
     name: "allocateNFTsToBattle",
     outputs: [],
@@ -355,73 +304,36 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
+      { internalType: "uint256[]", name: "_battleIds", type: "uint256[]" },
+    ],
+    name: "batchClaimRewards",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "address", name: "", type: "address" },
+      { internalType: "address", name: "", type: "address" },
     ],
     name: "battleAllocations",
     outputs: [
-      {
-        internalType: "uint256",
-        name: "battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "supportedMeme",
-        type: "address",
-      },
-      {
-        internalType: "bool",
-        name: "claimed",
-        type: "bool",
-      },
-      {
-        internalType: "bool",
-        name: "getBack",
-        type: "bool",
-      },
+      { internalType: "uint256", name: "battleId", type: "uint256" },
+      { internalType: "address", name: "user", type: "address" },
+      { internalType: "address", name: "supportedMeme", type: "address" },
+      { internalType: "bool", name: "claimed", type: "bool" },
+      { internalType: "bool", name: "getBack", type: "bool" },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "battleCooldowns",
     outputs: [
-      {
-        internalType: "bool",
-        name: "onBattle",
-        type: "bool",
-      },
-      {
-        internalType: "uint256",
-        name: "cooldownEndTime",
-        type: "uint256",
-      },
+      { internalType: "bool", name: "onBattle", type: "bool" },
+      { internalType: "uint256", name: "cooldownEndTime", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -429,50 +341,17 @@ export const memedBattleAbi = [
   {
     inputs: [],
     name: "battleCount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "battleDuration",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+      { internalType: "address", name: "", type: "address" },
+      { internalType: "uint256", name: "", type: "uint256" },
     ],
     name: "battleIds",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
@@ -490,91 +369,29 @@ export const memedBattleAbi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     name: "battles",
     outputs: [
-      {
-        internalType: "uint256",
-        name: "battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "memeA",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "memeB",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "memeANftsAllocated",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "memeBNftsAllocated",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "heatA",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "heatB",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "startTime",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "endTime",
-        type: "uint256",
-      },
-      {
-        internalType: "enum BattleStatus",
-        name: "status",
-        type: "uint8",
-      },
-      {
-        internalType: "address",
-        name: "winner",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "totalReward",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "battleId", type: "uint256" },
+      { internalType: "address", name: "memeA", type: "address" },
+      { internalType: "address", name: "memeB", type: "address" },
+      { internalType: "uint256", name: "memeANftsAllocated", type: "uint256" },
+      { internalType: "uint256", name: "memeBNftsAllocated", type: "uint256" },
+      { internalType: "uint256", name: "heatA", type: "uint256" },
+      { internalType: "uint256", name: "heatB", type: "uint256" },
+      { internalType: "uint256", name: "startTime", type: "uint256" },
+      { internalType: "uint256", name: "endTime", type: "uint256" },
+      { internalType: "enum BattleStatus", name: "status", type: "uint8" },
+      { internalType: "address", name: "winner", type: "address" },
+      { internalType: "uint256", name: "totalReward", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_memeA",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_memeB",
-        type: "address",
-      },
+      { internalType: "address", name: "_memeA", type: "address" },
+      { internalType: "address", name: "_memeB", type: "address" },
     ],
     name: "challengeBattle",
     outputs: [],
@@ -582,13 +399,7 @@ export const memedBattleAbi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "uint256", name: "_battleId", type: "uint256" }],
     name: "claimRewards",
     outputs: [],
     stateMutability: "nonpayable",
@@ -598,60 +409,20 @@ export const memedBattleAbi = [
     inputs: [],
     name: "factory",
     outputs: [
-      {
-        internalType: "contract IMemedFactory",
-        name: "",
-        type: "address",
-      },
+      { internalType: "contract IMemedFactory", name: "", type: "address" },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_user",
-        type: "address",
-      },
-    ],
-    name: "getBackWarrior",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ internalType: "uint256", name: "_battleId", type: "uint256" }],
     name: "getBattle",
     outputs: [
       {
         components: [
-          {
-            internalType: "uint256",
-            name: "battleId",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "memeA",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "memeB",
-            type: "address",
-          },
+          { internalType: "uint256", name: "battleId", type: "uint256" },
+          { internalType: "address", name: "memeA", type: "address" },
+          { internalType: "address", name: "memeB", type: "address" },
           {
             internalType: "uint256",
             name: "memeANftsAllocated",
@@ -662,41 +433,13 @@ export const memedBattleAbi = [
             name: "memeBNftsAllocated",
             type: "uint256",
           },
-          {
-            internalType: "uint256",
-            name: "heatA",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "heatB",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "startTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "endTime",
-            type: "uint256",
-          },
-          {
-            internalType: "enum BattleStatus",
-            name: "status",
-            type: "uint8",
-          },
-          {
-            internalType: "address",
-            name: "winner",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "totalReward",
-            type: "uint256",
-          },
+          { internalType: "uint256", name: "heatA", type: "uint256" },
+          { internalType: "uint256", name: "heatB", type: "uint256" },
+          { internalType: "uint256", name: "startTime", type: "uint256" },
+          { internalType: "uint256", name: "endTime", type: "uint256" },
+          { internalType: "enum BattleStatus", name: "status", type: "uint8" },
+          { internalType: "address", name: "winner", type: "address" },
+          { internalType: "uint256", name: "totalReward", type: "uint256" },
         ],
         internalType: "struct Battle",
         name: "",
@@ -708,56 +451,20 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_user",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_meme",
-        type: "address",
-      },
+      { internalType: "uint256", name: "_battleId", type: "uint256" },
+      { internalType: "address", name: "_user", type: "address" },
+      { internalType: "address", name: "_meme", type: "address" },
     ],
     name: "getBattleAllocations",
     outputs: [
       {
         components: [
-          {
-            internalType: "uint256",
-            name: "battleId",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "user",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "supportedMeme",
-            type: "address",
-          },
-          {
-            internalType: "uint256[]",
-            name: "nftsIds",
-            type: "uint256[]",
-          },
-          {
-            internalType: "bool",
-            name: "claimed",
-            type: "bool",
-          },
-          {
-            internalType: "bool",
-            name: "getBack",
-            type: "bool",
-          },
+          { internalType: "uint256", name: "battleId", type: "uint256" },
+          { internalType: "address", name: "user", type: "address" },
+          { internalType: "address", name: "supportedMeme", type: "address" },
+          { internalType: "uint256[]", name: "nftsIds", type: "uint256[]" },
+          { internalType: "bool", name: "claimed", type: "bool" },
+          { internalType: "bool", name: "getBack", type: "bool" },
         ],
         internalType: "struct UserBattleAllocation",
         name: "",
@@ -773,21 +480,9 @@ export const memedBattleAbi = [
     outputs: [
       {
         components: [
-          {
-            internalType: "uint256",
-            name: "battleId",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "memeA",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "memeB",
-            type: "address",
-          },
+          { internalType: "uint256", name: "battleId", type: "uint256" },
+          { internalType: "address", name: "memeA", type: "address" },
+          { internalType: "address", name: "memeB", type: "address" },
           {
             internalType: "uint256",
             name: "memeANftsAllocated",
@@ -798,41 +493,13 @@ export const memedBattleAbi = [
             name: "memeBNftsAllocated",
             type: "uint256",
           },
-          {
-            internalType: "uint256",
-            name: "heatA",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "heatB",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "startTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "endTime",
-            type: "uint256",
-          },
-          {
-            internalType: "enum BattleStatus",
-            name: "status",
-            type: "uint8",
-          },
-          {
-            internalType: "address",
-            name: "winner",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "totalReward",
-            type: "uint256",
-          },
+          { internalType: "uint256", name: "heatA", type: "uint256" },
+          { internalType: "uint256", name: "heatB", type: "uint256" },
+          { internalType: "uint256", name: "startTime", type: "uint256" },
+          { internalType: "uint256", name: "endTime", type: "uint256" },
+          { internalType: "enum BattleStatus", name: "status", type: "uint8" },
+          { internalType: "address", name: "winner", type: "address" },
+          { internalType: "uint256", name: "totalReward", type: "uint256" },
         ],
         internalType: "struct Battle[]",
         name: "",
@@ -844,44 +511,40 @@ export const memedBattleAbi = [
   },
   {
     inputs: [],
-    name: "getResolver",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    name: "getFactory",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_token",
-        type: "address",
-      },
+      { internalType: "address", name: "_token", type: "address" },
+      { internalType: "uint256", name: "_nftId", type: "uint256" },
     ],
+    name: "getNftRewardAndIsReturnable",
+    outputs: [
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "bool", name: "", type: "bool" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getResolver",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_token", type: "address" }],
     name: "getUserBattles",
     outputs: [
       {
         components: [
-          {
-            internalType: "uint256",
-            name: "battleId",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "memeA",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "memeB",
-            type: "address",
-          },
+          { internalType: "uint256", name: "battleId", type: "uint256" },
+          { internalType: "address", name: "memeA", type: "address" },
+          { internalType: "address", name: "memeB", type: "address" },
           {
             internalType: "uint256",
             name: "memeANftsAllocated",
@@ -892,41 +555,13 @@ export const memedBattleAbi = [
             name: "memeBNftsAllocated",
             type: "uint256",
           },
-          {
-            internalType: "uint256",
-            name: "heatA",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "heatB",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "startTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "endTime",
-            type: "uint256",
-          },
-          {
-            internalType: "enum BattleStatus",
-            name: "status",
-            type: "uint8",
-          },
-          {
-            internalType: "address",
-            name: "winner",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "totalReward",
-            type: "uint256",
-          },
+          { internalType: "uint256", name: "heatA", type: "uint256" },
+          { internalType: "uint256", name: "heatB", type: "uint256" },
+          { internalType: "uint256", name: "startTime", type: "uint256" },
+          { internalType: "uint256", name: "endTime", type: "uint256" },
+          { internalType: "enum BattleStatus", name: "status", type: "uint8" },
+          { internalType: "address", name: "winner", type: "address" },
+          { internalType: "uint256", name: "totalReward", type: "uint256" },
         ],
         internalType: "struct Battle[]",
         name: "",
@@ -937,80 +572,54 @@ export const memedBattleAbi = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "address", name: "_user", type: "address" }],
+    name: "getUserClaimableBattles",
+    outputs: [
+      { internalType: "uint256[]", name: "battleIdsArray", type: "uint256[]" },
+      { internalType: "uint256[]", name: "rewardsArray", type: "uint256[]" },
+      { internalType: "uint256", name: "totalReward", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_user",
-        type: "address",
-      },
+      { internalType: "uint256", name: "_battleId", type: "uint256" },
+      { internalType: "address", name: "_user", type: "address" },
     ],
     name: "getUserClaimableReward",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_user",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_token",
-        type: "address",
-      },
+      { internalType: "address", name: "_user", type: "address" },
+      { internalType: "address", name: "_token", type: "address" },
     ],
     name: "getUserClaimableRewards",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_user", type: "address" }],
+    name: "getUserTokenAllocations",
+    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_tokenId",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_until",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "_tokenId", type: "uint256" },
+      { internalType: "uint256", name: "_until", type: "uint256" },
     ],
     name: "getUserTokenBattleAllocations",
     outputs: [
       {
         components: [
-          {
-            internalType: "uint256",
-            name: "winCount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "loseCount",
-            type: "uint256",
-          },
+          { internalType: "uint256", name: "winCount", type: "uint256" },
+          { internalType: "uint256", name: "loseCount", type: "uint256" },
         ],
         internalType: "struct TokenBattleAllocation",
         name: "",
@@ -1022,29 +631,13 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "uint256", name: "", type: "uint256" },
     ],
     name: "nftBattleAllocations",
     outputs: [
-      {
-        internalType: "address",
-        name: "supportedMeme",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "battleId",
-        type: "uint256",
-      },
+      { internalType: "address", name: "supportedMeme", type: "address" },
+      { internalType: "uint256", name: "battleId", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -1052,13 +645,7 @@ export const memedBattleAbi = [
   {
     inputs: [],
     name: "owner",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
     type: "function",
   },
@@ -1071,21 +658,9 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_battleId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_actualWinner",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_totalReward",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "_battleId", type: "uint256" },
+      { internalType: "address", name: "_actualWinner", type: "address" },
+      { internalType: "uint256", name: "_totalReward", type: "uint256" },
     ],
     name: "resolveBattle",
     outputs: [],
@@ -1094,16 +669,8 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "_factory",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_resolver",
-        type: "address",
-      },
+      { internalType: "address", name: "_factory", type: "address" },
+      { internalType: "address", name: "_resolver", type: "address" },
     ],
     name: "setFactoryAndResolver",
     outputs: [],
@@ -1112,60 +679,26 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+      { internalType: "address", name: "", type: "address" },
+      { internalType: "uint256", name: "", type: "uint256" },
     ],
     name: "tokenAllocations",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "tokenBattleAllocations",
     outputs: [
-      {
-        internalType: "uint256",
-        name: "winCount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "loseCount",
-        type: "uint256",
-      },
+      { internalType: "uint256", name: "winCount", type: "uint256" },
+      { internalType: "uint256", name: "loseCount", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
     name: "transferOwnership",
     outputs: [],
     stateMutability: "nonpayable",
@@ -1173,49 +706,21 @@ export const memedBattleAbi = [
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "address", name: "", type: "address" },
     ],
     name: "userAllocationIndex",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+      { internalType: "address", name: "", type: "address" },
+      { internalType: "uint256", name: "", type: "uint256" },
     ],
     name: "userBattles",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },

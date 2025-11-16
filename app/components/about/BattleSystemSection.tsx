@@ -31,17 +31,17 @@ export function BattleSystemSection() {
               </ul>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="bg-blue-900/30 p-4 rounded-lg">
-                <Zap className="mx-auto w-8 h-8 text-blue-400 mb-2" />
+              <div className="bg-neutral-800/50 p-4 rounded-lg border border-neutral-700">
+                <Zap className="mx-auto w-8 h-8 text-neutral-400 mb-2" />
                 <p className="font-bold text-xl text-white">60%</p>
-                <p className="text-sm text-blue-300">Lens Engagement</p>
+                <p className="text-sm text-neutral-300">Lens Engagement</p>
               </div>
-              <div className="bg-purple-900/30 p-4 rounded-lg">
-                <Percent className="mx-auto w-8 h-8 text-purple-400 mb-2" />
+              <div className="bg-neutral-800/50 p-4 rounded-lg border border-neutral-700">
+                <Percent className="mx-auto w-8 h-8 text-neutral-400 mb-2" />
                 <p className="font-bold text-xl text-white">40%</p>
-                <p className="text-sm text-purple-300">Allocated Value</p>
+                <p className="text-sm text-neutral-300">Allocated Value</p>
               </div>
-              <div className="bg-red-900/30 p-4 rounded-lg">
+              <div className="bg-red-900/30 p-4 rounded-lg border border-red-700">
                 <Droplets className="mx-auto w-8 h-8 text-red-400 mb-2" />
                 <p className="font-bold text-xl text-white">15%</p>
                 <p className="text-sm text-red-300">Burn on Win</p>

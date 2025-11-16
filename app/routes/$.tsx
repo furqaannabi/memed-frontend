@@ -10,23 +10,23 @@ export function meta() {
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         {/* Animated 404 */}
         <div className="mb-8">
-          <h1 className="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 animate-pulse">
+          <h1 className="text-8xl font-bold text-white mb-4">
             404
           </h1>
-          <div className="text-6xl mb-4 animate-bounce">🤔</div>
+          <div className="text-6xl mb-4">🤔</div>
         </div>
 
         {/* Error Message */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+        <div className="bg-neutral-900 rounded-2xl p-8 border border-neutral-800">
           <h2 className="text-2xl font-bold text-white mb-4">
             Oops! This meme got lost
           </h2>
-          <p className="text-gray-300 mb-6 leading-relaxed">
-            The page you're looking for doesn't exist. Maybe it was turned into a token and traded away? 
+          <p className="text-neutral-400 mb-6 leading-relaxed">
+            The page you're looking for doesn't exist. Maybe it was turned into a token and traded away?
             Let's get you back to creating some epic memes!
           </p>
 
@@ -34,37 +34,37 @@ export default function NotFound() {
           <div className="space-y-4">
             <Link
               to="/"
-              className="block w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+              className="block w-full bg-green-600 hover:bg-green-700 text-black font-semibold py-3 px-6 rounded-lg transition-colors cursor-pointer"
             >
               🏠 Back to Home
             </Link>
-            
+
             <button
               onClick={() => window.history.back()}
-              className="block w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 border border-white/30"
+              className="block w-full bg-neutral-800 hover:bg-neutral-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors border border-neutral-700 cursor-pointer"
             >
               ← Go Back
             </button>
           </div>
 
           {/* Fun Stats */}
-          <div className="mt-8 pt-6 border-t border-white/20">
-            <p className="text-sm text-gray-400 mb-2">While you're here...</p>
+          <div className="mt-8 pt-6 border-t border-neutral-800">
+            <p className="text-sm text-neutral-500 mb-2">While you're here...</p>
             <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-lg font-bold text-purple-400">∞</div>
-                <div className="text-xs text-gray-400">Memes Created</div>
+              <div className="bg-neutral-800 rounded-lg p-3">
+                <div className="text-lg font-bold text-white">∞</div>
+                <div className="text-xs text-neutral-400">Memes Created</div>
               </div>
-              <div className="bg-white/5 rounded-lg p-3">
-                <div className="text-lg font-bold text-pink-400">🚀</div>
-                <div className="text-xs text-gray-400">To The Moon</div>
+              <div className="bg-neutral-800 rounded-lg p-3">
+                <div className="text-lg font-bold text-white">🚀</div>
+                <div className="text-xs text-neutral-400">To The Moon</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <p className="text-gray-500 text-sm mt-6">
+        <p className="text-neutral-600 text-sm mt-6">
           Lost? Confused? That's just the meme economy for you! 📈
         </p>
       </div>

@@ -48,7 +48,7 @@ const ReadyToLaunch = ({ tokenId, fairLaunchData }: ReadyToLaunchProps) => {
   const fairLaunchStartTime = fairLaunchData[1];
 
   return (
-    <div className="bg-gradient-to-br from-green-500/20 to-blue-500/20 border border-green-500/50 p-6 rounded-xl">
+    <div className="bg-neutral-900 border border-green-500/50 p-6 rounded-xl">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-3 bg-green-500/20 rounded-full">
           <RocketIcon className="text-green-400" size={24} />
@@ -87,10 +87,10 @@ const ReadyToLaunch = ({ tokenId, fairLaunchData }: ReadyToLaunchProps) => {
 
       {/* Launch Information */}
       <div className="space-y-4">
-        <div className="bg-blue-500/20 border border-blue-500/50 p-4 rounded-lg">
+        <div className="bg-neutral-800 border border-neutral-700 p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="text-blue-400" size={16} />
-            <span className="text-blue-400 font-medium">Launch Status</span>
+            <Clock className="text-neutral-400" size={16} />
+            <span className="text-neutral-300 font-medium">Launch Status</span>
           </div>
           <div className="text-white text-sm">
             Fair launch completed successfully! The project is now ready for the official launch phase.

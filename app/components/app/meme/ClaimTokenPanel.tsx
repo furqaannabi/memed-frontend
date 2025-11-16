@@ -172,9 +172,9 @@ const ClaimTokenPanel = ({ tokenId, tokenName = "Token" }: ClaimTokenPanelProps)
           </button>
 
           {/* Info Box */}
-          <div className="bg-blue-500/20 border border-blue-600 text-blue-300 text-sm p-3 rounded-md">
+          <div className="bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm p-3 rounded-md">
             <div className="font-medium mb-1">ℹ️ Claim Info</div>
-            <div className="text-xs text-blue-300 space-y-1">
+            <div className="text-xs text-neutral-400 space-y-1">
               <div>• Click the button above to claim your {tokenName} tokens</div>
               <div>• Tokens will be transferred directly to your wallet</div>
               <div>• This is a one-time action - you can only claim once</div>

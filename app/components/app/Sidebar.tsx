@@ -45,6 +45,11 @@ const navItems: NavItem[] = [
     icon: <TrophyIcon className="w-5 h-5" />,
   },
   {
+    name: "Creator",
+    path: "/creator",
+    icon: <Coins className="w-5 h-5" />,
+  },
+  {
     name: "Insights",
     path: "/insights",
     icon: <User className="w-5 h-5" />,
