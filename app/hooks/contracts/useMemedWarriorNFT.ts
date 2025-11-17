@@ -27,6 +27,8 @@ export function useWarriorBalance(
     args: [addressToQuery ?? "0x0000000000000000000000000000000000000000"],
     query: {
       enabled: !!nftAddress && !!addressToQuery,
+      refetchOnMount: true, // Always fetch fresh data when component mounts
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
     },
   });
 }
@@ -118,6 +120,8 @@ export function useUserActiveNfts(
     query: {
       enabled: !!nftAddress && !!addressToQuery,
       refetchInterval: 5000, // Refetch every 5 seconds for live updates
+      refetchOnMount: true, // Always fetch fresh data when component mounts
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
     },
   });
 }

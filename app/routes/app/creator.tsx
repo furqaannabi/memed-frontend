@@ -132,7 +132,8 @@ export default function CreatorDashboard() {
             Creator Dashboard
           </h1>
           <p className="text-gray-400">
-            Build Heat across platforms to automatically unlock creator incentives. 100k Heat = 2M tokens!
+            Build Heat across platforms to automatically unlock creator
+            incentives. 100k Heat = 2M tokens!
           </p>
 
           {/* Token Selector */}
@@ -215,8 +216,8 @@ export default function CreatorDashboard() {
                               ? Number(heatScore)
                               : 0;
                             const nextThreshold =
-                              Math.ceil(currentHeat / 100000) * 100000 ||
-                              100000;
+                              Math.ceil(currentHeat / 100000) * 100000 +
+                                100000 || currentHeat + 100000;
                             return nextThreshold.toLocaleString();
                           })()}
                         </div>
@@ -363,49 +364,50 @@ export default function CreatorDashboard() {
 
                 {/* Claim Card - Unlocking happens automatically via factory contract */}
                 <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-6 h-6 text-green-500" />
-                      <h2 className="text-xl font-semibold text-white">
-                        Claim Earnings
-                      </h2>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-6 h-6 text-green-500" />
+                    <h2 className="text-xl font-semibold text-white">
+                      Claim Earnings
+                    </h2>
+                  </div>
+
+                  <p className="text-sm text-neutral-400 mb-6">
+                    Claim your unlocked creator incentives to your wallet.
+                    Unlocking happens automatically when you reach Heat
+                    milestones.
+                  </p>
+
+                  {isClaimConfirmed && (
+                    <div className="bg-green-500/10 border border-green-500 text-green-400 p-3 rounded-lg mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-sm">
+                        Incentives claimed successfully!
+                      </span>
                     </div>
+                  )}
 
-                    <p className="text-sm text-neutral-400 mb-6">
-                      Claim your unlocked creator incentives to your wallet. Unlocking happens automatically when you reach Heat milestones.
-                    </p>
-
-                    {isClaimConfirmed && (
-                      <div className="bg-green-500/10 border border-green-500 text-green-400 p-3 rounded-lg mb-4 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-sm">
-                          Incentives claimed successfully!
-                        </span>
-                      </div>
+                  <button
+                    onClick={handleClaim}
+                    disabled={!canClaim || isClaimPending || isClaimConfirming}
+                    className="w-full cursor-pointer bg-green-600 hover:bg-green-700 disabled:bg-neutral-800 disabled:border-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 text-gray-300 font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isClaimPending || isClaimConfirming ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {isClaimPending ? "Signing..." : "Claiming..."}
+                      </>
+                    ) : !canClaim ? (
+                      "No Available Balance"
+                    ) : (
+                      <>
+                        <Coins className="w-4 h-4" />
+                        Claim {formatTokenAmount(
+                          formatEther(unlockedBalance)
+                        )}{" "}
+                        {tokenName}
+                      </>
                     )}
-
-                    <button
-                      onClick={handleClaim}
-                      disabled={
-                        !canClaim || isClaimPending || isClaimConfirming
-                      }
-                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-neutral-800 disabled:border-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 text-gray-300 font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      {isClaimPending || isClaimConfirming ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          {isClaimPending ? "Signing..." : "Claiming..."}
-                        </>
-                      ) : !canClaim ? (
-                        "No Available Balance"
-                      ) : (
-                        <>
-                          <Coins className="w-4 h-4" />
-                          Claim{" "}
-                          {formatTokenAmount(formatEther(unlockedBalance))}{" "}
-                          {tokenName}
-                        </>
-                      )}
-                    </button>
+                  </button>
                 </div>
 
                 {/* Enhanced Info Box */}
@@ -497,13 +499,17 @@ export default function CreatorDashboard() {
                           activity
                         </p>
                         <p>
-                          • <strong>Step 2:</strong> Factory contract automatically unlocks incentives when you reach Heat milestones
+                          • <strong>Step 2:</strong> Factory contract
+                          automatically unlocks incentives when you reach Heat
+                          milestones
                         </p>
                         <p>
                           • <strong>Step 3:</strong> Claim unlocked tokens to
                           your wallet anytime
                         </p>
-                        <p>• No manual unlock needed - just build Heat and claim!</p>
+                        <p>
+                          • No manual unlock needed - just build Heat and claim!
+                        </p>
                       </div>
                     </div>
                   </div>

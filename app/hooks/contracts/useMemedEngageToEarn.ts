@@ -9,17 +9,17 @@ import { memedEngageToEarnAbi } from "@/abi";
 
 /**
  * Hook to read a user's engagement rewards.
- * Returns all claimable rewards for the connected wallet (msg.sender).
- * No parameters needed - contract uses msg.sender internally.
+ * Returns all claimable rewards for the specified user address.
+ * Pass the user's wallet address as a parameter to get their rewards.
  */
 export function useGetUserEngagementReward() {
   const { address } = useAccount();
-
+  console.log(address);
   return useReadContract({
     address: ENGAGE_TO_EARN_ADDRESS,
     abi: memedEngageToEarnAbi,
     functionName: "getUserEngagementReward",
-    args: [], // No arguments - uses msg.sender
+    account: address, // Simulates calling from this address (sets msg.sender)
     query: {
       enabled: !!address, // Only fetch when wallet is connected
       refetchInterval: 5000, // Refetch every 5 seconds

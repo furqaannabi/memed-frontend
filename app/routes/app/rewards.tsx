@@ -35,7 +35,7 @@ export default function EngagementRewards() {
     isLoading: isLoadingRewards,
     refetch: refetchRewards,
   } = useGetUserEngagementReward();
-
+  console.log(rewardsData);
   // Set default selected token when data loads
   useEffect(() => {
     if (!selectedTokenAddress && !isLoadingUser && !isLoadingRewards) {
@@ -114,23 +114,6 @@ export default function EngagementRewards() {
 
   // Use NFT address from factory first, fallback to user.token data
   const selectedNftAddress = nftAddressFromFactory as `0x${string}`;
-
-  // Debug log when selectedTokenAddress or filteredRewards changes
-  useEffect(() => {
-    if (selectedTokenAddress) {
-      console.log("=== SELECTED TOKEN DEBUG ===");
-      console.log("Selected address:", selectedTokenAddress);
-      console.log("Filtered rewards:", filteredRewards);
-      console.log("Selected token metadata:", selectedToken);
-      console.log("NFT address:", selectedNftAddress);
-      console.log("===========================");
-    }
-  }, [
-    selectedTokenAddress,
-    filteredRewards,
-    selectedToken,
-    selectedNftAddress,
-  ]);
 
   const { data: activeNFTs, isLoading: isLoadingNFTs } = useUserActiveNfts(
     selectedNftAddress,
@@ -244,22 +227,6 @@ export default function EngagementRewards() {
                   (t) => t.address && t.address.toLowerCase() !== ZERO_ADDRESS
                 ) || [];
 
-              // DEBUG LOGGING
-              console.log("=== TOKEN SOURCES DEBUG ===");
-              console.log("1. Raw rewardsData:", rewardsData);
-              console.log(
-                "2. Tokens from rewards (after filter):",
-                Array.from(tokensWithRewards)
-              );
-              console.log(
-                "3. User launched tokens:",
-                launchedTokens.map((t) => ({
-                  id: t.id,
-                  address: t.address,
-                  name: t.metadata?.name,
-                }))
-              );
-
               // Get unique token addresses from both sources
               const allTokenAddresses = Array.from(
                 new Set([
@@ -267,12 +234,6 @@ export default function EngagementRewards() {
                   ...launchedTokens.map((t) => t.address!.toLowerCase()),
                 ])
               ).filter((addr) => addr && addr !== ZERO_ADDRESS);
-
-              console.log(
-                "4. Final combined token addresses:",
-                allTokenAddresses
-              );
-              console.log("=========================");
 
               if (allTokenAddresses.length > 0) {
                 return (
@@ -442,7 +403,9 @@ export default function EngagementRewards() {
                                     <>
                                       <Loader2 className="w-4 h-4 animate-spin" />
                                       <span className="hidden sm:inline">
-                                        {isClaimPending ? "Signing..." : "Claiming..."}
+                                        {isClaimPending
+                                          ? "Signing..."
+                                          : "Claiming..."}
                                       </span>
                                     </>
                                   ) : (
@@ -462,7 +425,8 @@ export default function EngagementRewards() {
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-neutral-800">
                       {/* Page Info */}
                       <div className="text-sm text-neutral-400">
-                        Showing {startIndex + 1}-{Math.min(endIndex, filteredRewards?.length || 0)} of{" "}
+                        Showing {startIndex + 1}-
+                        {Math.min(endIndex, filteredRewards?.length || 0)} of{" "}
                         {filteredRewards?.length || 0} rewards
                       </div>
 
@@ -470,7 +434,9 @@ export default function EngagementRewards() {
                       <div className="flex items-center gap-2">
                         {/* Previous Button */}
                         <button
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
                           disabled={currentPage === 1}
                           className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
                         >
@@ -479,7 +445,10 @@ export default function EngagementRewards() {
 
                         {/* Page Numbers */}
                         <div className="flex items-center gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          {Array.from(
+                            { length: totalPages },
+                            (_, i) => i + 1
+                          ).map((page) => {
                             // Show first, last, current, and pages near current
                             const showPage =
                               page === 1 ||
@@ -490,7 +459,10 @@ export default function EngagementRewards() {
                               // Show ellipsis
                               if (page === 2 || page === totalPages - 1) {
                                 return (
-                                  <span key={page} className="text-neutral-500 px-2">
+                                  <span
+                                    key={page}
+                                    className="text-neutral-500 px-2"
+                                  >
                                     ...
                                   </span>
                                 );
@@ -516,7 +488,9 @@ export default function EngagementRewards() {
 
                         {/* Next Button */}
                         <button
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
                           disabled={currentPage === totalPages}
                           className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
                         >

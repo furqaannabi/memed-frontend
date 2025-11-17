@@ -57,27 +57,28 @@ const ClaimTokenPanel = ({ tokenId, tokenName = "Token" }: ClaimTokenPanelProps)
     isPending: isClaiming,
     isConfirming: isConfirmingClaim,
     isConfirmed: isClaimConfirmed,
+    error: claimError,
   } = useClaim();
 
-  // State for success message
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  // State for tracking if claim process has started
+  const [claimStarted, setClaimStarted] = useState(false);
 
-  // Handle success message when claim is confirmed
+  // Reset claimStarted when there's an error
   useEffect(() => {
-    if (isClaimConfirmed) {
-      // Show success message
-      setShowSuccessMessage(true);
-
-      // Hide success message after 5 seconds
-      const timer = setTimeout(() => {
-        setShowSuccessMessage(false);
-      }, 5000);
-
-      return () => clearTimeout(timer);
+    if (claimError) {
+      setClaimStarted(false);
     }
-  }, [isClaimConfirmed]);
+  }, [claimError]);
+
+  // Set claimStarted when transaction begins
+  useEffect(() => {
+    if (isClaiming || isConfirmingClaim) {
+      setClaimStarted(true);
+    }
+  }, [isClaiming, isConfirmingClaim]);
 
   const handleClaim = () => {
+    setClaimStarted(true);
     claim({ id: tokenId });
   };
 
@@ -87,13 +88,16 @@ const ClaimTokenPanel = ({ tokenId, tokenName = "Token" }: ClaimTokenPanelProps)
     userCommitment.tokenAmount > 0n &&
     !userCommitment.claimed;
 
-  // Check if user already claimed
-  const alreadyClaimed = userCommitment && userCommitment.claimed;
+  // Check if user already claimed (or claim is confirmed)
+  const alreadyClaimed = (userCommitment && userCommitment.claimed) || isClaimConfirmed;
 
   // Check if user has no commitment
   const noCommitment = !userCommitment || userCommitment.amount === 0n;
 
   const isTransacting = isClaiming || isConfirmingClaim;
+
+  // Show claim section only if has tokens and hasn't started claiming yet
+  const showClaimSection = hasTokensToClaim && !claimStarted;
 
   return (
     <div className="bg-neutral-900 p-6 rounded-xl w-full space-y-4">
@@ -101,31 +105,57 @@ const ClaimTokenPanel = ({ tokenId, tokenName = "Token" }: ClaimTokenPanelProps)
         <Gift className="text-green-500" /> Claim {tokenName} Tokens
       </h2>
 
-      {/* Success Message */}
-      {showSuccessMessage && (
-        <div className="bg-green-500/20 border border-green-600 text-green-300 p-3 rounded-md">
-          <div className="text-sm font-medium mb-1">
-            ✅ Claim Successful!
+      {/* Transaction Processing State */}
+      {claimStarted && isTransacting && (
+        <div className="bg-blue-500/20 border border-blue-600 text-blue-300 p-4 rounded-md">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+            <div>
+              <div className="text-sm font-medium mb-1">
+                {isClaiming ? "Confirm Transaction..." : "Processing Claim..."}
+              </div>
+              <div className="text-xs text-blue-300">
+                {isClaiming
+                  ? "Please confirm the transaction in your wallet"
+                  : "Your claim is being processed on the blockchain"}
+              </div>
+            </div>
           </div>
-          <div className="text-xs text-green-300">
-            Your {tokenName} tokens have been transferred to your wallet.
+        </div>
+      )}
+
+      {/* Error Message */}
+      {claimError && (
+        <div className="bg-red-500/20 border border-red-600 text-red-300 p-3 rounded-md">
+          <div className="text-sm font-medium mb-1">
+            ❌ Claim Failed
+          </div>
+          <div className="text-xs text-red-300">
+            {claimError.message || "There was an error claiming your tokens. Please try again."}
           </div>
         </div>
       )}
 
       {/* Already Claimed Message */}
-      {alreadyClaimed && (
+      {alreadyClaimed && !isTransacting && (
         <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-md">
           <div className="text-sm font-medium mb-2 text-green-400 flex items-center gap-2">
             <CheckCircle size={16} />
-            Tokens Already Claimed
+            Tokens Claimed Successfully!
           </div>
           <div className="text-xs text-neutral-300">
-            You successfully claimed{" "}
-            <span className="text-white font-medium">
-              {formatTokenAmount(formatEther(userCommitment.tokenAmount))} {tokenName}
-            </span>{" "}
-            tokens. Check your wallet!
+            {userCommitment && (
+              <>
+                You successfully claimed{" "}
+                <span className="text-white font-medium">
+                  {formatTokenAmount(formatEther(userCommitment.tokenAmount))} {tokenName}
+                </span>{" "}
+                tokens. Check your wallet!
+              </>
+            )}
+            {!userCommitment && (
+              <>Your {tokenName} tokens have been transferred to your wallet!</>
+            )}
           </div>
         </div>
       )}
@@ -139,8 +169,8 @@ const ClaimTokenPanel = ({ tokenId, tokenName = "Token" }: ClaimTokenPanelProps)
         </div>
       )}
 
-      {/* Claim Section - Only show if user has tokens to claim */}
-      {hasTokensToClaim && (
+      {/* Claim Section - Only show if user has tokens to claim and hasn't started claiming */}
+      {showClaimSection && (
         <>
           {/* Token Allocation Display */}
           <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-md">

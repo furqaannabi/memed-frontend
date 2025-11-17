@@ -182,8 +182,8 @@ export default function Meme() {
             )}
             {currentPhase === 3 && (
               <>
-                <ActiveBattles />
-                <BattleHistory />
+                <ActiveBattles tokenAddress={token.address as `0x${string}`} />
+                <BattleHistory tokenAddress={token.address as `0x${string}`} />
               </>
             )}
             {currentPhase === 4 && (

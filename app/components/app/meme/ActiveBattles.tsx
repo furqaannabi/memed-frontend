@@ -1,48 +1,143 @@
-import { SwordsIcon } from "lucide-react";
-import meme1 from "@/assets/images/meme1.webp";
-import meme2 from "@/assets/images/meme2.jpg";
+import { useState, useMemo } from "react";
+import { SwordsIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { BattleCard } from "@/components/shared/BattleCard";
+import { useGetBattles } from "@/hooks/contracts/useMemedBattle";
 
-const cards = [
-  {
-    leftImage: meme1,
-    rightImage: meme2,
-    leftLabel: "Meme 1",
-    rightLabel: "Meme 2",
-    leftViews: "3.1M",
-    rightViews: "2.9M",
-  },
-  {
-    leftImage: meme2,
-    rightImage: meme1,
-    leftLabel: "Meme 3",
-    rightLabel: "Meme 4",
-    leftViews: "1.2M",
-    rightViews: "4.5M",
-  },
-];
+// Battle status enum
+type BattleStatus = 0 | 1 | 2 | 3;
 
-const ActiveBattles = () => {
+// Battle interface from contract
+interface Battle {
+  battleId: bigint;
+  memeA: `0x${string}`;
+  memeB: `0x${string}`;
+  memeANftsAllocated: bigint;
+  memeBNftsAllocated: bigint;
+  heatA: bigint;
+  heatB: bigint;
+  startTime: bigint;
+  endTime: bigint;
+  status: BattleStatus;
+  winner: `0x${string}`;
+  totalReward: bigint;
+}
+
+interface ActiveBattlesProps {
+  tokenAddress: `0x${string}`;
+}
+
+const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
+  // Pagination state - show 2 battles per page to match the grid
+  const [currentPage, setCurrentPage] = useState(0);
+  const battlesPerPage = 2;
+
+  // Fetch all battles from contract
+  const { data: battlesData, isLoading } = useGetBattles();
+  const battles: Battle[] = (battlesData as Battle[]) || [];
+
+  // Filter for active battles (STARTED status = 2) involving this token
+  const activeBattles = useMemo(() => {
+    return battles.filter(
+      (battle) =>
+        battle.status === 2 && // STARTED (Active)
+        (battle.memeA.toLowerCase() === tokenAddress.toLowerCase() ||
+          battle.memeB.toLowerCase() === tokenAddress.toLowerCase())
+    );
+  }, [battles, tokenAddress]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(activeBattles.length / battlesPerPage);
+  const startIndex = currentPage * battlesPerPage;
+  const endIndex = startIndex + battlesPerPage;
+  const currentBattles = activeBattles.slice(startIndex, endIndex);
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    setCurrentPage((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
+  };
+
+  // Helper to determine which side is this token
+  const getTokenSide = (battle: Battle): "left" | "right" => {
+    return battle.memeA.toLowerCase() === tokenAddress.toLowerCase()
+      ? "left"
+      : "right";
+  };
+
   return (
     <div className="bg-neutral-900 p-6 rounded-xl mx-auto">
-      <h2 className="text-white text-xl font-semibold mb-6 flex items-center gap-2">
-        <SwordsIcon />
-        Active Battles
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-white text-xl font-semibold flex items-center gap-2">
+          <SwordsIcon />
+          Active Battles
+          {activeBattles.length > 0 && (
+            <span className="text-sm text-neutral-400 font-normal">
+              ({activeBattles.length})
+            </span>
+          )}
+        </h2>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {cards.map((card, i) => (
-          <BattleCard
-            key={i}
-            leftImage={card.leftImage}
-            rightImage={card.rightImage}
-            leftLabel={card.leftLabel}
-            rightLabel={card.rightLabel}
-            leftViews={card.leftViews}
-            rightViews={card.rightViews}
-          />
-        ))}
+        {/* Pagination Controls - Only show if more than 2 battles */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevious}
+              disabled={currentPage === 0}
+              className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <span className="text-sm text-neutral-400">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={currentPage === totalPages - 1}
+              className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+        </div>
+      ) : activeBattles.length === 0 ? (
+        // Empty State
+        <div className="text-center py-12 text-neutral-400">
+          <SwordsIcon className="w-12 h-12 mx-auto mb-3 text-neutral-700" />
+          <p>No active battles at the moment</p>
+        </div>
+      ) : (
+        // Battle Cards Grid
+        <div className="grid lg:grid-cols-2 gap-6">
+          {currentBattles.map((battle) => {
+            const side = getTokenSide(battle);
+            const isLeft = side === "left";
+
+            return (
+              <BattleCard
+                key={Number(battle.battleId)}
+                leftImage="" // You can add token images from metadata if available
+                rightImage=""
+                leftLabel={isLeft ? "This Token" : `Battle ${battle.battleId}`}
+                rightLabel={isLeft ? `Battle ${battle.battleId}` : "This Token"}
+                leftViews={`${Number(battle.heatA).toLocaleString()} Heat`}
+                rightViews={`${Number(battle.heatB).toLocaleString()} Heat`}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
