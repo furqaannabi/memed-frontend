@@ -25,7 +25,7 @@ export function HeroSection() {
           to="/explore"
           className="inline-flex items-center px-8 py-4 border border-green-700 bg-black text-white font-bold rounded-full hover:bg-green-700 transition-colors group"
         >
-          Launch App
+          Explore
           <MoveUpRight
             size={15}
             className="ml-2 group-hover:translate-x-1 transition-transform"

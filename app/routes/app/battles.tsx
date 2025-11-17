@@ -29,7 +29,10 @@ import {
 } from "@/hooks/contracts/useMemedBattle";
 import { useAuthStore } from "@/store/auth";
 import { useGetWarriorNFT } from "@/hooks/contracts/useMemedFactory";
-import { useUserActiveNfts, useWarriorBalance } from "@/hooks/contracts/useMemedWarriorNFT";
+import {
+  useUserActiveNfts,
+  useWarriorBalance,
+} from "@/hooks/contracts/useMemedWarriorNFT";
 import { useTokenHeat } from "@/hooks/contracts/useMemedFactory";
 import top from "@/assets/images/battle-top.svg";
 import bottom from "@/assets/images/battle-bottom.svg";
@@ -74,7 +77,7 @@ interface TokenData {
 // Visual Card Component for Selected Token
 function TokenCard({
   token,
-  onRemove
+  onRemove,
 }: {
   token: TokenData;
   onRemove?: () => void;
@@ -103,7 +106,9 @@ function TokenCard({
       </div>
 
       <div className="pb-3 pt-2">
-        <div className="text-white font-bold text-lg mb-2 truncate">{token.name}</div>
+        <div className="text-white font-bold text-lg mb-2 truncate">
+          {token.name}
+        </div>
         <div className="flex justify-between items-center text-xs gap-3">
           <div>
             <p className="text-gray-400 truncate">Created by {token.creator}</p>
@@ -129,7 +134,7 @@ function TokenCard({
 // Empty Selection Slot Component
 function EmptySlot({
   onClick,
-  label = "Select meme to start Battle"
+  label = "Select meme to start Battle",
 }: {
   onClick: () => void;
   label?: string;
@@ -214,7 +219,9 @@ export default function Battles() {
 
   // Token selection modal state
   const [showTokenSelector, setShowTokenSelector] = useState(false);
-  const [selectingFor, setSelectingFor] = useState<"memeA" | "memeB" | null>(null);
+  const [selectingFor, setSelectingFor] = useState<"memeA" | "memeB" | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [allTokens, setAllTokens] = useState<any[]>([]);
   const [isLoadingAllTokens, setIsLoadingAllTokens] = useState(false);
@@ -222,7 +229,9 @@ export default function Battles() {
   // NFT Allocation state
   const [showAllocateModal, setShowAllocateModal] = useState(false);
   const [allocationBattle, setAllocationBattle] = useState<Battle | null>(null);
-  const [supportingSide, setSupportingSide] = useState<"memeA" | "memeB" | null>(null);
+  const [supportingSide, setSupportingSide] = useState<
+    "memeA" | "memeB" | null
+  >(null);
   const [selectedNFTs, setSelectedNFTs] = useState<bigint[]>([]);
 
   // Battle Details Modal state
@@ -242,11 +251,12 @@ export default function Battles() {
   } = useAllocateNftsToBattle();
 
   // Get NFT address for selected allocation battle
-  const supportedTokenAddress = supportingSide === "memeA"
-    ? allocationBattle?.memeA
-    : supportingSide === "memeB"
-    ? allocationBattle?.memeB
-    : undefined;
+  const supportedTokenAddress =
+    supportingSide === "memeA"
+      ? allocationBattle?.memeA
+      : supportingSide === "memeB"
+      ? allocationBattle?.memeB
+      : undefined;
 
   const { data: nftAddress } = useGetWarriorNFT(supportedTokenAddress);
 
@@ -334,7 +344,9 @@ export default function Battles() {
       if (showTokenSelector && selectingFor === "memeB") {
         setIsLoadingAllTokens(true);
         try {
-          const response = await apiClient.get<{ tokens: any[] }>(API_ENDPOINTS.TOKENS);
+          const response = await apiClient.get<{ tokens: any[] }>(
+            API_ENDPOINTS.TOKENS
+          );
           setAllTokens(response.data.tokens || []);
         } catch (error) {
           console.error("Failed to fetch all tokens:", error);
@@ -393,11 +405,19 @@ export default function Battles() {
 
   // Handle NFT allocation
   const handleAllocateNFTs = () => {
-    if (!allocationBattle || !address || !supportingSide || selectedNFTs.length === 0) {
+    if (
+      !allocationBattle ||
+      !address ||
+      !supportingSide ||
+      selectedNFTs.length === 0
+    ) {
       return;
     }
 
-    const supportedMeme = supportingSide === "memeA" ? allocationBattle.memeA : allocationBattle.memeB;
+    const supportedMeme =
+      supportingSide === "memeA"
+        ? allocationBattle.memeA
+        : allocationBattle.memeB;
 
     allocateNfts({
       battleId: allocationBattle.battleId,
@@ -425,17 +445,19 @@ export default function Battles() {
 
   // Get list of tokens created by the current user that can challenge
   // Permission: Only token creators can initiate battles
-  const availableTokens = user?.token?.filter(
-    (t) =>
-      t.address &&
-      t.userId === user.id && // Check if user is the creator
-      !isTokenInBattle(t.address as `0x${string}`)
-  ) || [];
+  const availableTokens =
+    user?.token?.filter(
+      (t) =>
+        t.address &&
+        t.userId === user.id && // Check if user is the creator
+        !isTokenInBattle(t.address as `0x${string}`)
+    ) || [];
 
   // Get all token addresses created by the user (for checking pending challenges)
-  const userTokenAddresses = user?.token
-    ?.filter((t) => t.userId === user.id)
-    .map((t) => t.address?.toLowerCase()) || [];
+  const userTokenAddresses =
+    user?.token
+      ?.filter((t) => t.userId === user.id)
+      .map((t) => t.address?.toLowerCase()) || [];
 
   // Get pending challenges to the user's tokens (where user's token is challenged - Meme B)
   const pendingChallenges = battles.filter(
@@ -507,6 +529,8 @@ export default function Battles() {
     return heatScore + nftScore;
   };
 
+  // console.log(battles);
+
   return (
     <div className="min-h-screen text-white">
       <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 w-full">
@@ -557,7 +581,13 @@ export default function Battles() {
 
           <button
             onClick={handleCreateBattle}
-            disabled={!selectedMemeA || !selectedMemeB || isChallengePending || isChallengeConfirming || !address}
+            disabled={
+              !selectedMemeA ||
+              !selectedMemeB ||
+              isChallengePending ||
+              isChallengeConfirming ||
+              !address
+            }
             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-t from-primary-900 to-black text-white px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform cursor-pointer font-semibold"
           >
             {isChallengePending || isChallengeConfirming ? (
@@ -582,7 +612,9 @@ export default function Battles() {
         {challengeError && (
           <div className="max-w-4xl mx-auto bg-red-500/10 border border-red-500 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2">
             <AlertCircle className="w-5 h-5" />
-            <span>Error: {challengeError.message || "Failed to create battle"}</span>
+            <span>
+              Error: {challengeError.message || "Failed to create battle"}
+            </span>
           </div>
         )}
 
@@ -600,7 +632,8 @@ export default function Battles() {
                     </span>
                   </h2>
                   <p className="text-neutral-300 text-sm">
-                    Your tokens have been challenged to battle. Accept or ignore to let them expire.
+                    Your tokens have been challenged to battle. Accept or ignore
+                    to let them expire.
                   </p>
                 </div>
               </div>
@@ -615,7 +648,9 @@ export default function Battles() {
               {acceptError && (
                 <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg mb-4 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Error: {acceptError.message || "Failed to accept battle"}</span>
+                  <span className="text-sm">
+                    Error: {acceptError.message || "Failed to accept battle"}
+                  </span>
                 </div>
               )}
 
@@ -630,16 +665,22 @@ export default function Battles() {
                       <div className="flex-1">
                         <div className="flex items-center gap-4 mb-2">
                           <div>
-                            <p className="text-xs text-neutral-500">Challenger Token</p>
+                            <p className="text-xs text-neutral-500">
+                              Challenger Token
+                            </p>
                             <p className="text-white font-mono text-sm">
-                              {battle.memeA.slice(0, 6)}...{battle.memeA.slice(-4)}
+                              {battle.memeA.slice(0, 6)}...
+                              {battle.memeA.slice(-4)}
                             </p>
                           </div>
                           <span className="text-red-500 font-bold">VS</span>
                           <div>
-                            <p className="text-xs text-neutral-500">Your Token</p>
+                            <p className="text-xs text-neutral-500">
+                              Your Token
+                            </p>
                             <p className="text-yellow-400 font-mono text-sm font-semibold">
-                              {battle.memeB.slice(0, 6)}...{battle.memeB.slice(-4)}
+                              {battle.memeB.slice(0, 6)}...
+                              {battle.memeB.slice(-4)}
                             </p>
                           </div>
                         </div>
@@ -726,271 +767,290 @@ export default function Battles() {
 
           {/* Battle Status Filter Tabs */}
           <div className="mb-6 flex gap-2 flex-wrap">
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              statusFilter === "all"
-                ? "bg-green-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
-            }`}
-          >
-            All Battles ({battles.length})
-          </button>
-          <button
-            onClick={() => setStatusFilter(2)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              statusFilter === 2
-                ? "bg-green-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
-            }`}
-          >
-            Active ({battles.filter((b) => b.status === 2).length})
-          </button>
-          <button
-            onClick={() => setStatusFilter(1)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              statusFilter === 1
-                ? "bg-green-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
-            }`}
-          >
-            Pending ({battles.filter((b) => b.status === 1).length})
-          </button>
-          <button
-            onClick={() => setStatusFilter(3)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              statusFilter === 3
-                ? "bg-green-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
-            }`}
-          >
-            Completed ({battles.filter((b) => b.status === 3).length})
-          </button>
-        </div>
-
-        {/* Battles Grid - Loading State */}
-        {isLoadingBattles && !battlesData ? (
-          <div className="flex flex-col items-center justify-center py-12 bg-neutral-900 rounded-lg border border-neutral-800">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500 mb-4" />
-            <p className="text-neutral-400">Loading battles...</p>
+            <button
+              onClick={() => setStatusFilter("all")}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                statusFilter === "all"
+                  ? "bg-green-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+              }`}
+            >
+              All Battles ({battles.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter(2)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                statusFilter === 2
+                  ? "bg-green-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+              }`}
+            >
+              Active ({battles.filter((b) => b.status === 2).length})
+            </button>
+            <button
+              onClick={() => setStatusFilter(1)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                statusFilter === 1
+                  ? "bg-green-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+              }`}
+            >
+              Pending ({battles.filter((b) => b.status === 1).length})
+            </button>
+            <button
+              onClick={() => setStatusFilter(3)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                statusFilter === 3
+                  ? "bg-green-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+              }`}
+            >
+              Completed ({battles.filter((b) => b.status === 3).length})
+            </button>
           </div>
-        ) : filteredBattles.length === 0 ? (
-          // Empty State
-          <div className="text-center py-12 bg-neutral-900 rounded-lg border border-neutral-800">
-            <Swords className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No {statusFilter !== "all" ? getStatusLabel(statusFilter) : ""}{" "}
-              Battles Found
-            </h3>
-            <p className="text-neutral-400 mb-6">
-              {statusFilter !== "all"
-                ? `There are no ${getStatusLabel(statusFilter).toLowerCase()} battles at the moment.`
-                : "No battles have been created yet. Be the first to start a battle!"}
-            </p>
-            {statusFilter !== "all" && (
-              <button
-                onClick={() => setStatusFilter("all")}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                View All Battles
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Battles Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {paginatedBattles.map((battle) => {
-                // Get border color based on status
-                const borderColor =
-                  battle.status === 1 ? "border-yellow-500/30 hover:border-yellow-500/50" : // CHALLENGED (Pending)
-                  battle.status === 2 ? "border-green-500/30 hover:border-green-500/50" :   // STARTED (Active)
-                  "border-neutral-800 hover:border-neutral-700";                             // NOT_STARTED or RESOLVED
 
-                return (
-                <div
-                  key={Number(battle.battleId)}
-                  className={`bg-neutral-900 border rounded-lg p-6 transition-colors ${borderColor}`}
+          {/* Battles Grid - Loading State */}
+          {isLoadingBattles && !battlesData ? (
+            <div className="flex flex-col items-center justify-center py-12 bg-neutral-900 rounded-lg border border-neutral-800">
+              <Loader2 className="w-8 h-8 animate-spin text-green-500 mb-4" />
+              <p className="text-neutral-400">Loading battles...</p>
+            </div>
+          ) : filteredBattles.length === 0 ? (
+            // Empty State
+            <div className="text-center py-12 bg-neutral-900 rounded-lg border border-neutral-800">
+              <Swords className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No {statusFilter !== "all" ? getStatusLabel(statusFilter) : ""}{" "}
+                Battles Found
+              </h3>
+              <p className="text-neutral-400 mb-6">
+                {statusFilter !== "all"
+                  ? `There are no ${getStatusLabel(
+                      statusFilter
+                    ).toLowerCase()} battles at the moment.`
+                  : "No battles have been created yet. Be the first to start a battle!"}
+              </p>
+              {statusFilter !== "all" && (
+                <button
+                  onClick={() => setStatusFilter("all")}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
                 >
-                  {/* Battle Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Swords className="w-5 h-5 text-red-500" />
-                      <span className="text-neutral-400 text-sm">
-                        Battle #{Number(battle.battleId)}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full border ${getStatusColor(
-                        battle.status
-                      )}`}
+                  View All Battles
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Battles Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {paginatedBattles.map((battle) => {
+                  // Get border color based on status
+                  const borderColor =
+                    battle.status === 1
+                      ? "border-yellow-500/30 hover:border-yellow-500/50" // CHALLENGED (Pending)
+                      : battle.status === 2
+                      ? "border-green-500/30 hover:border-green-500/50" // STARTED (Active)
+                      : "border-neutral-800 hover:border-neutral-700"; // NOT_STARTED or RESOLVED
+
+                  return (
+                    <div
+                      key={Number(battle.battleId)}
+                      className={`bg-neutral-900 border rounded-lg p-6 transition-colors ${borderColor}`}
                     >
-                      {getStatusLabel(battle.status)}
-                    </span>
-                  </div>
-
-                  {/* Battle Participants */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    {/* Meme A */}
-                    <div className="text-center">
-                      <div className="bg-neutral-800 rounded-lg p-3 mb-2">
-                        <p className="text-xs text-neutral-500 mb-1">Meme A</p>
-                        <p className="text-white font-mono text-xs truncate">
-                          {battle.memeA.slice(0, 6)}...{battle.memeA.slice(-4)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-center gap-1 text-xs">
-                          <Flame className="w-3 h-3 text-orange-400" />
-                          <span className="text-neutral-400">
-                            {Number(battle.heatA).toLocaleString()}
+                      {/* Battle Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Swords className="w-5 h-5 text-red-500" />
+                          <span className="text-neutral-400 text-sm">
+                            Battle #{Number(battle.battleId)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-center gap-1 text-xs">
-                          <Users className="w-3 h-3 text-blue-400" />
-                          <span className="text-neutral-400">
-                            {Number(battle.memeANftsAllocated)} NFTs
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* VS */}
-                    <div className="flex items-center justify-center">
-                      <span className="text-2xl font-bold text-red-500">VS</span>
-                    </div>
-
-                    {/* Meme B */}
-                    <div className="text-center">
-                      <div className="bg-neutral-800 rounded-lg p-3 mb-2">
-                        <p className="text-xs text-neutral-500 mb-1">Meme B</p>
-                        <p className="text-white font-mono text-xs truncate">
-                          {battle.memeB.slice(0, 6)}...{battle.memeB.slice(-4)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-center gap-1 text-xs">
-                          <Flame className="w-3 h-3 text-orange-400" />
-                          <span className="text-neutral-400">
-                            {Number(battle.heatB).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-center gap-1 text-xs">
-                          <Users className="w-3 h-3 text-blue-400" />
-                          <span className="text-neutral-400">
-                            {Number(battle.memeBNftsAllocated)} NFTs
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Battle Progress Bar (for active battles) */}
-                  {battle.status === 2 && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-neutral-400 mb-2">
-                        <span>Meme A</span>
-                        <span>Meme B</span>
-                      </div>
-                      <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
-                          style={{
-                            width: `${
-                              battle.heatA + battle.heatB > 0n
-                                ? (Number(battle.heatA) /
-                                    Number(battle.heatA + battle.heatB)) *
-                                  100
-                                : 50
-                            }%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Battle Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-neutral-800 gap-2">
-                    {battle.status === 2 && (
-                      <div className="flex items-center gap-2 text-sm text-neutral-400">
-                        <Clock className="w-4 h-4" />
-                        <span>{getTimeRemaining(battle.endTime)}</span>
-                      </div>
-                    )}
-                    {battle.status === 3 && battle.winner !== ("0x0000000000000000000000000000000000000000" as `0x${string}`) && (
-                      <div className="flex items-center gap-2 text-sm text-green-400">
-                        <Trophy className="w-4 h-4" />
-                        <span>
-                          Winner: {battle.winner.slice(0, 6)}...{battle.winner.slice(-4)}
+                        <span
+                          className={`text-xs px-3 py-1 rounded-full border ${getStatusColor(
+                            battle.status
+                          )}`}
+                        >
+                          {getStatusLabel(battle.status)}
                         </span>
                       </div>
-                    )}
-                    <div className="ml-auto flex gap-2">
-                      {/* Allocate NFTs button for active battles */}
-                      {battle.status === 2 && address && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleOpenAllocation(battle, "memeA")}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
-                            title="Support Meme A"
-                          >
-                            Support A
-                          </button>
-                          <button
-                            onClick={() => handleOpenAllocation(battle, "memeB")}
-                            className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
-                            title="Support Meme B"
-                          >
-                            Support B
-                          </button>
+
+                      {/* Battle Participants */}
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        {/* Meme A */}
+                        <div className="text-center">
+                          <div className="bg-neutral-800 rounded-lg p-3 mb-2">
+                            <p className="text-xs text-neutral-500 mb-1">
+                              Meme A
+                            </p>
+                            <p className="text-white font-mono text-xs truncate">
+                              {battle.memeA.slice(0, 6)}...
+                              {battle.memeA.slice(-4)}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <Flame className="w-3 h-3 text-orange-400" />
+                              <span className="text-neutral-400">
+                                {Number(battle.heatA).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <Users className="w-3 h-3 text-blue-400" />
+                              <span className="text-neutral-400">
+                                {Number(battle.memeANftsAllocated)} NFTs
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* VS */}
+                        <div className="flex items-center justify-center">
+                          <span className="text-2xl font-bold text-red-500">
+                            VS
+                          </span>
+                        </div>
+
+                        {/* Meme B */}
+                        <div className="text-center">
+                          <div className="bg-neutral-800 rounded-lg p-3 mb-2">
+                            <p className="text-xs text-neutral-500 mb-1">
+                              Meme B
+                            </p>
+                            <p className="text-white font-mono text-xs truncate">
+                              {battle.memeB.slice(0, 6)}...
+                              {battle.memeB.slice(-4)}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <Flame className="w-3 h-3 text-orange-400" />
+                              <span className="text-neutral-400">
+                                {Number(battle.heatB).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <Users className="w-3 h-3 text-blue-400" />
+                              <span className="text-neutral-400">
+                                {Number(battle.memeBNftsAllocated)} NFTs
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Battle Progress Bar (for active battles) */}
+                      {battle.status === 2 && (
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-neutral-400 mb-2">
+                            <span>Meme A</span>
+                            <span>Meme B</span>
+                          </div>
+                          <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
+                              style={{
+                                width: `${
+                                  battle.heatA + battle.heatB > 0n
+                                    ? (Number(battle.heatA) /
+                                        Number(battle.heatA + battle.heatB)) *
+                                      100
+                                    : 50
+                                }%`,
+                              }}
+                            />
+                          </div>
                         </div>
                       )}
-                      <button
-                        onClick={() => handleOpenDetails(battle)}
-                        className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-                      >
-                        Details
-                      </button>
+
+                      {/* Battle Footer */}
+                      <div className="flex items-center justify-between pt-4 border-t border-neutral-800 gap-2">
+                        {battle.status === 2 && (
+                          <div className="flex items-center gap-2 text-sm text-neutral-400">
+                            <Clock className="w-4 h-4" />
+                            <span>{getTimeRemaining(battle.endTime)}</span>
+                          </div>
+                        )}
+                        {battle.status === 3 &&
+                          battle.winner !==
+                            ("0x0000000000000000000000000000000000000000" as `0x${string}`) && (
+                            <div className="flex items-center gap-2 text-sm text-green-400">
+                              <Trophy className="w-4 h-4" />
+                              <span>
+                                Winner: {battle.winner.slice(0, 6)}...
+                                {battle.winner.slice(-4)}
+                              </span>
+                            </div>
+                          )}
+                        <div className="ml-auto flex gap-2">
+                          {/* Allocate NFTs button for active battles */}
+                          {battle.status === 2 && address && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() =>
+                                  handleOpenAllocation(battle, "memeA")
+                                }
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                title="Support Meme A"
+                              >
+                                Support A
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleOpenAllocation(battle, "memeB")
+                                }
+                                className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                title="Support Meme B"
+                              >
+                                Support B
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => handleOpenDetails(battle)}
+                            className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <div className="text-sm text-neutral-400">
+                    Showing {startIndex + 1}-
+                    {Math.min(endIndex, filteredBattles.length)} of{" "}
+                    {filteredBattles.length} battles
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="text-neutral-400 text-sm">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                      Next →
+                    </button>
                   </div>
                 </div>
-                );
-              })}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4">
-                <div className="text-sm text-neutral-400">
-                  Showing {startIndex + 1}-
-                  {Math.min(endIndex, filteredBattles.length)} of{" "}
-                  {filteredBattles.length} battles
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-                  >
-                    ← Prev
-                  </button>
-                  <span className="text-neutral-400 text-sm">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-                  >
-                    Next →
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
         </div>
         {/* End Existing Battles Section */}
 
@@ -1003,7 +1063,9 @@ export default function Battles() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-2xl font-semibold text-white mb-1">
-                      {selectingFor === "memeA" ? "Select Your Token" : "Search Opponent Token"}
+                      {selectingFor === "memeA"
+                        ? "Select Your Token"
+                        : "Search Opponent Token"}
                     </h2>
                     <p className="text-sm text-neutral-400">
                       {selectingFor === "memeA"
@@ -1043,132 +1105,164 @@ export default function Battles() {
 
               {/* Token Grid */}
               <div className="p-6">
-                {(selectingFor === "memeA" ? isLoadingUser : isLoadingAllTokens) ? (
+                {(
+                  selectingFor === "memeA" ? isLoadingUser : isLoadingAllTokens
+                ) ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-green-500 mb-4" />
                     <p className="text-neutral-400">
-                      {selectingFor === "memeA" ? "Loading your tokens..." : "Loading all tokens..."}
+                      {selectingFor === "memeA"
+                        ? "Loading your tokens..."
+                        : "Loading all tokens..."}
                     </p>
                   </div>
-                ) : (() => {
-                  // Get the appropriate token list based on selection
-                  const tokenList = selectingFor === "memeA" ? availableTokens : allTokens;
+                ) : (
+                  (() => {
+                    // Get the appropriate token list based on selection
+                    const tokenList =
+                      selectingFor === "memeA" ? availableTokens : allTokens;
 
-                  // Filter tokens based on search query (only for Meme B)
-                  const filteredTokens = selectingFor === "memeB" && searchQuery
-                    ? tokenList.filter((token) => {
-                        const query = searchQuery.toLowerCase();
-                        return (
-                          token.metadata?.name?.toLowerCase().includes(query) ||
-                          token.metadata?.ticker?.toLowerCase().includes(query) ||
-                          token.address?.toLowerCase().includes(query)
-                        );
-                      })
-                    : tokenList;
+                    // Filter tokens based on search query (only for Meme B)
+                    const filteredTokens =
+                      selectingFor === "memeB" && searchQuery
+                        ? tokenList.filter((token) => {
+                            const query = searchQuery.toLowerCase();
+                            return (
+                              token.metadata?.name
+                                ?.toLowerCase()
+                                .includes(query) ||
+                              token.metadata?.ticker
+                                ?.toLowerCase()
+                                .includes(query) ||
+                              token.address?.toLowerCase().includes(query)
+                            );
+                          })
+                        : tokenList;
 
-                  if (filteredTokens.length === 0) {
+                    if (filteredTokens.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-white mb-2">
+                            {searchQuery
+                              ? "No Tokens Found"
+                              : "No Available Tokens"}
+                          </h3>
+                          <p className="text-neutral-400 text-sm mb-4">
+                            {searchQuery
+                              ? `No tokens match "${searchQuery}"`
+                              : selectingFor === "memeA"
+                              ? "You haven't launched any tokens yet, or they're all currently in battles."
+                              : "No tokens available to challenge."}
+                          </p>
+                          {!searchQuery && selectingFor === "memeA" && (
+                            <Link
+                              to="/app/launch"
+                              className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+                            >
+                              Launch a Token
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div className="text-center py-12">
-                        <AlertCircle className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-white mb-2">
-                          {searchQuery ? "No Tokens Found" : "No Available Tokens"}
-                        </h3>
-                        <p className="text-neutral-400 text-sm mb-4">
-                          {searchQuery
-                            ? `No tokens match "${searchQuery}"`
-                            : selectingFor === "memeA"
-                            ? "You haven't launched any tokens yet, or they're all currently in battles."
-                            : "No tokens available to challenge."}
-                        </p>
-                        {!searchQuery && selectingFor === "memeA" && (
-                          <Link
-                            to="/app/launch"
-                            className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
-                          >
-                            Launch a Token
-                          </Link>
-                        )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredTokens.map((token) => {
+                          // Get image using correct priority: token.image.s3Key > metadata.imageKey > fallback
+                          const imageUrl =
+                            token.image?.s3Key ||
+                            (token.metadata as any)?.imageKey ||
+                            "";
+
+                          const tokenData: TokenData = {
+                            address: token.address as `0x${string}`,
+                            name: token.metadata?.name || "Unnamed Token",
+                            ticker: token.metadata?.ticker || "???",
+                            image: imageUrl,
+                            creator: token.userId
+                              ? `${token.userId.slice(
+                                  0,
+                                  6
+                                )}...${token.userId.slice(-4)}`
+                              : "Unknown",
+                          };
+
+                          // Don't show already selected token
+                          const isAlreadySelected =
+                            (selectingFor === "memeA" &&
+                              selectedMemeB?.address === token.address) ||
+                            (selectingFor === "memeB" &&
+                              selectedMemeA?.address === token.address);
+
+                          if (isAlreadySelected) return null;
+
+                          // Check if token is in battle/cooldown
+                          const battleStatus = getTokenBattleStatus(
+                            token.address as `0x${string}`
+                          );
+                          const inBattle = !!battleStatus;
+                          const isDisabled = inBattle;
+
+                          return (
+                            <button
+                              key={token.id}
+                              onClick={() =>
+                                !isDisabled && handleSelectToken(tokenData)
+                              }
+                              disabled={isDisabled}
+                              className={`bg-neutral-800 rounded-xl p-4 border-2 transition-all relative ${
+                                isDisabled
+                                  ? "border-neutral-700 opacity-50 cursor-not-allowed"
+                                  : "border-neutral-700 hover:border-green-500 cursor-pointer group"
+                              }`}
+                            >
+                              {/* Cooldown/Battle Badge */}
+                              {inBattle && (
+                                <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/30 text-red-400 text-xs px-2 py-1 rounded flex items-center gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  In Battle
+                                </div>
+                              )}
+                              <div className="aspect-square w-full bg-neutral-700 rounded-lg overflow-hidden mb-3">
+                                {tokenData.image ? (
+                                  <img
+                                    src={tokenData.image}
+                                    alt={tokenData.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-4xl">
+                                    🎭
+                                  </div>
+                                )}
+                              </div>
+                              <h3 className="text-white font-semibold text-lg mb-1 truncate">
+                                {tokenData.name}
+                              </h3>
+                              <p className="text-neutral-400 text-sm truncate">
+                                ${tokenData.ticker}
+                              </p>
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-neutral-500">
+                                  Created by{" "}
+                                  <span className="font-mono">
+                                    {tokenData.creator}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-neutral-600 font-mono">
+                                  {token.address.slice(0, 6)}...
+                                  {token.address.slice(-4)}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {filteredTokens.map((token) => {
-                      // Get image using correct priority: token.image.s3Key > metadata.imageKey > fallback
-                      const imageUrl = token.image?.s3Key || (token.metadata as any)?.imageKey || "";
-
-                      const tokenData: TokenData = {
-                        address: token.address as `0x${string}`,
-                        name: token.metadata?.name || "Unnamed Token",
-                        ticker: token.metadata?.ticker || "???",
-                        image: imageUrl,
-                        creator: token.userId ? `${token.userId.slice(0, 6)}...${token.userId.slice(-4)}` : "Unknown",
-                      };
-
-                      // Don't show already selected token
-                      const isAlreadySelected =
-                        (selectingFor === "memeA" && selectedMemeB?.address === token.address) ||
-                        (selectingFor === "memeB" && selectedMemeA?.address === token.address);
-
-                      if (isAlreadySelected) return null;
-
-                      // Check if token is in battle/cooldown
-                      const battleStatus = getTokenBattleStatus(token.address as `0x${string}`);
-                      const inBattle = !!battleStatus;
-                      const isDisabled = inBattle;
-
-                      return (
-                        <button
-                          key={token.id}
-                          onClick={() => !isDisabled && handleSelectToken(tokenData)}
-                          disabled={isDisabled}
-                          className={`bg-neutral-800 rounded-xl p-4 border-2 transition-all relative ${
-                            isDisabled
-                              ? "border-neutral-700 opacity-50 cursor-not-allowed"
-                              : "border-neutral-700 hover:border-green-500 cursor-pointer group"
-                          }`}
-                        >
-                          {/* Cooldown/Battle Badge */}
-                          {inBattle && (
-                            <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/30 text-red-400 text-xs px-2 py-1 rounded flex items-center gap-1">
-                              <Shield className="w-3 h-3" />
-                              In Battle
-                            </div>
-                          )}
-                          <div className="aspect-square w-full bg-neutral-700 rounded-lg overflow-hidden mb-3">
-                            {tokenData.image ? (
-                              <img
-                                src={tokenData.image}
-                                alt={tokenData.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-4xl">
-                                🎭
-                              </div>
-                            )}
-                          </div>
-                          <h3 className="text-white font-semibold text-lg mb-1 truncate">
-                            {tokenData.name}
-                          </h3>
-                          <p className="text-neutral-400 text-sm truncate">
-                            ${tokenData.ticker}
-                          </p>
-                          <div className="mt-2 space-y-1">
-                            <p className="text-xs text-neutral-500">
-                              Created by <span className="font-mono">{tokenData.creator}</span>
-                            </p>
-                            <p className="text-xs text-neutral-600 font-mono">
-                              {token.address.slice(0, 6)}...{token.address.slice(-4)}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  );
-                })()}
+                  })()
+                )}
               </div>
             </div>
           </div>
@@ -1195,7 +1289,8 @@ export default function Battles() {
                   </button>
                 </div>
                 <p className="text-sm text-neutral-400">
-                  Supporting {supportingSide === "memeA" ? "Meme A" : "Meme B"} in Battle #{Number(allocationBattle.battleId)}
+                  Supporting {supportingSide === "memeA" ? "Meme A" : "Meme B"}{" "}
+                  in Battle #{Number(allocationBattle.battleId)}
                 </p>
               </div>
 
@@ -1222,7 +1317,9 @@ export default function Battles() {
                 {isLoadingNFTs ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
-                    <p className="text-neutral-400">Loading your Warrior NFTs...</p>
+                    <p className="text-neutral-400">
+                      Loading your Warrior NFTs...
+                    </p>
                   </div>
                 ) : !activeNFTs || activeNFTs.length === 0 ? (
                   <div className="text-center py-12">
@@ -1244,13 +1341,16 @@ export default function Battles() {
                   <>
                     <div className="mb-4">
                       <p className="text-sm text-neutral-400 mb-2">
-                        Select NFTs to allocate ({selectedNFTs.length} selected) • {availableNFTs} available / {totalNFTs} total
+                        Select NFTs to allocate ({selectedNFTs.length} selected)
+                        • {availableNFTs} available / {totalNFTs} total
                       </p>
                       {lockedNFTs > 0 && (
                         <div className="flex items-center gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded px-3 py-2">
                           <Shield className="w-3 h-3" />
                           <span>
-                            🔒 {lockedNFTs} Warrior{lockedNFTs > 1 ? 's are' : ' is'} currently locked in other battles
+                            🔒 {lockedNFTs} Warrior
+                            {lockedNFTs > 1 ? "s are" : " is"} currently locked
+                            in other battles
                           </span>
                         </div>
                       )}
@@ -1286,7 +1386,9 @@ export default function Battles() {
                     {/* Info Box */}
                     <div className="bg-blue-500/10 border border-blue-500 text-blue-400 p-3 rounded-lg mb-4 text-sm">
                       <Shield className="w-4 h-4 inline mr-2" />
-                      Selected NFTs will be locked for the duration of the battle. They contribute to your side's total support value (40% of battle score).
+                      Selected NFTs will be locked for the duration of the
+                      battle. They contribute to your side's total support value
+                      (40% of battle score).
                     </div>
 
                     {/* Allocate Button */}
@@ -1302,12 +1404,15 @@ export default function Battles() {
                       {isAllocatePending || isAllocateConfirming ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          {isAllocatePending ? "Confirm in Wallet..." : "Allocating NFTs..."}
+                          {isAllocatePending
+                            ? "Confirm in Wallet..."
+                            : "Allocating NFTs..."}
                         </>
                       ) : (
                         <>
                           <Users className="w-5 h-5" />
-                          Allocate {selectedNFTs.length} NFT{selectedNFTs.length !== 1 ? "s" : ""}
+                          Allocate {selectedNFTs.length} NFT
+                          {selectedNFTs.length !== 1 ? "s" : ""}
                         </>
                       )}
                     </button>
@@ -1471,20 +1576,18 @@ export default function Battles() {
                           <div
                             className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
                             style={{
-                              width: `${
-                                (() => {
-                                  const scoreA = calculateBattleScore(
-                                    detailsBattle.heatA,
-                                    detailsBattle.memeANftsAllocated
-                                  );
-                                  const scoreB = calculateBattleScore(
-                                    detailsBattle.heatB,
-                                    detailsBattle.memeBNftsAllocated
-                                  );
-                                  const total = scoreA + scoreB;
-                                  return total > 0 ? (scoreA / total) * 100 : 50;
-                                })()
-                              }%`,
+                              width: `${(() => {
+                                const scoreA = calculateBattleScore(
+                                  detailsBattle.heatA,
+                                  detailsBattle.memeANftsAllocated
+                                );
+                                const scoreB = calculateBattleScore(
+                                  detailsBattle.heatB,
+                                  detailsBattle.memeBNftsAllocated
+                                );
+                                const total = scoreA + scoreB;
+                                return total > 0 ? (scoreA / total) * 100 : 50;
+                              })()}%`,
                             }}
                           />
                         </div>
@@ -1561,7 +1664,9 @@ export default function Battles() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-neutral-300">Total Reward:</span>
+                          <span className="text-neutral-300">
+                            Total Reward:
+                          </span>
                           <span className="text-white font-bold">
                             {formatEther(detailsBattle.totalReward)} tokens
                           </span>
@@ -1578,8 +1683,12 @@ export default function Battles() {
                     Battle Scoring Formula
                   </h3>
                   <div className="text-sm text-blue-400 space-y-1">
-                    <p>• <strong>60%</strong> - Heat Score (platform engagement)</p>
-                    <p>• <strong>40%</strong> - NFT Support (community backing)</p>
+                    <p>
+                      • <strong>60%</strong> - Heat Score (platform engagement)
+                    </p>
+                    <p>
+                      • <strong>40%</strong> - NFT Support (community backing)
+                    </p>
                     <p className="text-xs text-blue-300 mt-2">
                       The side with the highest combined score wins!
                     </p>
