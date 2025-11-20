@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { CoinsIcon, TrendingDown, CheckCircle } from "lucide-react";
+import { CoinsIcon, TrendingDown, CheckCircle, AlertTriangle } from "lucide-react";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import {
@@ -7,6 +7,9 @@ import {
   useCommitToFairLaunch,
   useGetUserCommitment,
   useCancelCommit,
+  useGetExpectedClaim,
+  useFairLaunchData,
+  useRaiseEth,
 } from "@/hooks/contracts/useMemedTokenSale";
 import {
   usePaymentTokenBalance,
@@ -105,6 +108,18 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
     isPending: isCancelling,
     isConfirming: isConfirmingCancel,
   } = useCancelCommit();
+
+  // Get fair launch data to check for oversubscription
+  const { data: fairLaunchData } = useFairLaunchData(tokenId);
+  const { data: raiseTarget } = useRaiseEth();
+  const TARGET_ETH = raiseTarget || 40n * 10n ** 18n;
+
+  // Get expected claim to show what user will actually receive
+  const { data: expectedClaim } = useGetExpectedClaim(tokenId, address);
+
+  // Calculate if launch is currently oversubscribed
+  const totalCommitted = fairLaunchData ? fairLaunchData[2] : 0n;
+  const isOversubscribed = totalCommitted > TARGET_ETH;
 
   // Payment token hooks
   const { data: tokenBalance } = usePaymentTokenBalance();
@@ -427,6 +442,37 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
           className="w-full p-2 rounded-md bg-neutral-800 text-neutral-400 border border-neutral-700"
         />
       </div>
+
+      {/* Expected Claim Preview - Shows actual tokens user will receive if oversubscribed */}
+      {expectedClaim && isOversubscribed && calculatedTokens && parseFloat(calculatedTokens) > 0 && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 -mt-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-orange-400 font-semibold text-xs mb-1">
+                Launch Currently Oversubscribed
+              </div>
+              <div className="text-neutral-300 text-xs space-y-1">
+                <div>
+                  Expected to receive: <span className="text-white font-medium">
+                    {formatTokenAmount(formatEther(expectedClaim[0]))} MEME
+                  </span>
+                </div>
+                {expectedClaim[1] > 0n && (
+                  <div>
+                    Potential refund: <span className="text-white font-medium">
+                      {formatTokenAmount(formatEther(expectedClaim[1]))} {tokenSymbol || "TOKEN"}
+                    </span>
+                  </div>
+                )}
+                <div className="text-xs text-orange-300/80 mt-1">
+                  Final allocation may vary as more users commit
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance Display - Formatted for better readability */}
       {tokenBalance !== undefined && (

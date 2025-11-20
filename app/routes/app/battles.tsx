@@ -26,6 +26,7 @@ import {
   useGetBattleCooldown,
   useGetBattleCooldownDuration,
   useGetBattleDuration,
+  useGetBattleAllocations,
 } from "@/hooks/contracts/useMemedBattle";
 import { useAuthStore } from "@/store/auth";
 import { useGetWarriorNFT } from "@/hooks/contracts/useMemedFactory";
@@ -39,6 +40,9 @@ import bottom from "@/assets/images/battle-bottom.svg";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/config";
 import { Search } from "lucide-react";
+import { TokenCard, type TokenData } from "@/components/app/battles/TokenCard";
+import { EmptySlot } from "@/components/app/battles/EmptySlot";
+import { useDebounce } from "@/utils/debounce";
 
 // Battle status enum matching contract
 // 0 = NOT_STARTED (initial state, not used)
@@ -63,117 +67,6 @@ interface Battle {
   status: BattleStatus;
   winner: `0x${string}`;
   totalReward: bigint;
-}
-
-// Token data for selection
-interface TokenData {
-  address: `0x${string}`;
-  name: string;
-  ticker: string;
-  image: string;
-  creator: string;
-  heat?: bigint;
-  marketCap?: string;
-}
-
-// Visual Card Component for Selected Token
-function TokenCard({
-  token,
-  onRemove,
-}: {
-  token: TokenData;
-  onRemove?: () => void;
-}) {
-  // Fetch real-time heat for this token
-  const { data: heatData } = useTokenHeat(token.address);
-  const heat = heatData || token.heat || 0n;
-
-  return (
-    <div className="w-full max-w-sm bg-neutral-900 rounded-lg overflow-hidden shadow-xl flex flex-col justify-between p-2 relative">
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          className="absolute top-4 right-4 z-10 bg-neutral-800 hover:bg-red-900/40 border border-neutral-700 hover:border-red-500/50 rounded-full p-1.5 transition-all"
-        >
-          <X className="w-4 h-4 text-neutral-400 hover:text-red-400 transition-colors" />
-        </button>
-      )}
-
-      <div className="h-72 flex items-center justify-center bg-neutral-800 rounded-lg overflow-hidden">
-        <img
-          src={token.image}
-          alt={token.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="pb-3 pt-2">
-        <div className="text-white font-bold text-lg mb-2 truncate">
-          {token.name}
-        </div>
-        <div className="flex justify-between items-center text-xs gap-3">
-          <div>
-            <p className="text-gray-400 truncate">Created by {token.creator}</p>
-          </div>
-          <div className="flex items-center gap-2 text-gray-300">
-            <div className="flex items-center gap-1">
-              <Flame size={14} className="text-orange-500" />
-              <span>{Number(heat).toLocaleString()}</span>
-            </div>
-            {token.marketCap && (
-              <div>
-                <span className="text-green-400">MC:</span>
-                <span className="ml-1">{token.marketCap}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Empty Selection Slot Component
-function EmptySlot({
-  onClick,
-  label = "Select meme to start Battle",
-}: {
-  onClick: () => void;
-  label?: string;
-}) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <div className="w-full max-w-sm bg-neutral-900 rounded-2xl border-4 border-neutral-800 border-dashed shadow-2xl">
-      <div
-        className="flex flex-col items-center justify-center py-32 px-8 cursor-pointer transition-all duration-200 hover:bg-neutral-800"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={onClick}
-      >
-        <div
-          className={`w-16 h-16 rounded-full border-2 border-neutral-500 flex items-center justify-center mb-6 transition-all duration-200 ${
-            isHovered ? "border-neutral-400 scale-105" : ""
-          }`}
-        >
-          <Plus
-            size={24}
-            className={`text-neutral-500 transition-colors duration-200 ${
-              isHovered ? "text-neutral-400" : ""
-            }`}
-          />
-        </div>
-
-        <p
-          className={`text-neutral-500 text-base font-medium transition-colors duration-200 text-center ${
-            isHovered ? "text-neutral-400" : ""
-          }`}
-        >
-          {label}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export default function Battles() {
@@ -241,6 +134,8 @@ export default function Battles() {
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
+  // Debounced search query to prevent excessive filtering on every keystroke
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [allTokens, setAllTokens] = useState<any[]>([]);
   const [isLoadingAllTokens, setIsLoadingAllTokens] = useState(false);
 
@@ -276,13 +171,87 @@ export default function Battles() {
       ? allocationBattle?.memeB
       : undefined;
 
-  const { data: nftAddress } = useGetWarriorNFT(supportedTokenAddress);
+  const { data: nftAddress, isLoading: isLoadingNftAddress } = useGetWarriorNFT(supportedTokenAddress);
 
   // Fetch user's active NFTs for the supported token
-  const { data: activeNFTs, isLoading: isLoadingNFTs } = useUserActiveNfts(
+  // Enable immediate refetch when modal opens
+  const { data: activeNFTs, isLoading: isLoadingNFTs, refetch: refetchActiveNFTs } = useUserActiveNfts(
     nftAddress as `0x${string}`,
     address
   );
+
+  // Get user's current allocations for this specific battle to prevent re-allocation
+  const {
+    data: userBattleAllocations,
+    refetch: refetchBattleAllocations,
+    isLoading: isLoadingAllocations,
+    error: allocationsError
+  } = useGetBattleAllocations(
+    allocationBattle?.battleId,
+    address,
+    supportedTokenAddress
+  );
+
+  // Log query parameters (only when modal is open to reduce console spam)
+  if (showAllocateModal) {
+    console.log('Allocations Query Params:', {
+      battleId: allocationBattle?.battleId?.toString(),
+      address,
+      supportedTokenAddress,
+      isLoading: isLoadingAllocations,
+      error: allocationsError,
+    });
+  }
+
+  // Get list of NFT IDs already allocated to this battle
+  // userBattleAllocations is a tuple: [battleId, user, supportedMeme, nftsIds[], claimed, getBack]
+  // nftsIds is at index 3
+  const allocatedNFTsArray = userBattleAllocations?.[3] as bigint[] | undefined;
+  const allocatedNFTIds = allocatedNFTsArray && Array.isArray(allocatedNFTsArray)
+    ? allocatedNFTsArray
+    : [];
+
+  // Debug logging - only when modal is open
+  if (showAllocateModal) {
+    console.log('Battle Allocation Debug:', {
+      battleId: allocationBattle?.battleId?.toString(),
+      userBattleAllocations,
+      allocatedNFTIds: allocatedNFTIds.map(id => id.toString()),
+      activeNFTs: activeNFTs?.map(id => id.toString()),
+      supportedTokenAddress,
+      hasAllocationBattle: !!allocationBattle,
+      hasSupportingSide: !!supportingSide,
+    });
+  }
+
+  // Helper function to check if an NFT is already allocated to this battle
+  const isNFTAllocated = (nftId: bigint): boolean => {
+    // Only check if we have valid allocation data
+    if (!allocatedNFTIds || allocatedNFTIds.length === 0) {
+      return false;
+    }
+    return allocatedNFTIds.some((allocatedId) => allocatedId === nftId);
+  };
+
+  // For display purposes, we'll show all active NFTs but disable allocated ones
+  const availableNFTsForBattle = activeNFTs || [];
+
+  // Refetch NFTs and allocations immediately when allocation modal opens
+  // Wait for allocationBattle and supportedTokenAddress to be set
+  useEffect(() => {
+    if (showAllocateModal && nftAddress && allocationBattle && supportedTokenAddress) {
+      console.log('Refetching with valid params:', {
+        battleId: allocationBattle.battleId.toString(),
+        supportedTokenAddress,
+        nftAddress: nftAddress.toString(),
+      });
+      refetchActiveNFTs();
+      // Small delay to ensure state is fully updated before refetching allocations
+      setTimeout(() => {
+        refetchBattleAllocations();
+      }, 100);
+    }
+  }, [showAllocateModal, nftAddress, allocationBattle, supportedTokenAddress, refetchActiveNFTs, refetchBattleAllocations]);
 
   // Fetch total NFT balance to show locked count
   const { data: totalBalance } = useWarriorBalance(
@@ -292,8 +261,10 @@ export default function Battles() {
 
   // Calculate NFT counts
   const totalNFTs = totalBalance ? Number(totalBalance) : 0;
-  const availableNFTs = activeNFTs?.length || 0;
-  const lockedNFTs = totalNFTs - availableNFTs;
+  const alreadyAllocatedToThisBattle = allocatedNFTIds.length;
+  const availableNFTsCount = (activeNFTs?.length || 0) - alreadyAllocatedToThisBattle;
+  const lockedInOtherBattles = totalNFTs - (activeNFTs?.length || 0);
+  const totalUnavailable = alreadyAllocatedToThisBattle + lockedInOtherBattles;
 
   // Parse battles data from contract response
   const battles: Battle[] = (battlesData as Battle[]) || [];
@@ -366,6 +337,10 @@ export default function Battles() {
     if (isAllocateConfirmed) {
       // Refetch battles to update NFT counts
       refetchBattles();
+      // Refetch active NFTs to remove allocated ones from the list
+      refetchActiveNFTs();
+      // Refetch battle allocations to update the "already allocated" count
+      refetchBattleAllocations();
       // Reset allocation state
       setSelectedNFTs([]);
       setShowAllocateModal(false);
@@ -409,6 +384,7 @@ export default function Battles() {
   // Handle opening token selector
   const handleOpenTokenSelector = (forSlot: "memeA" | "memeB") => {
     setSelectingFor(forSlot);
+    setSearchQuery(""); // Clear search query when opening modal
     setShowTokenSelector(true);
   };
 
@@ -505,13 +481,21 @@ export default function Battles() {
 
   // Get list of tokens created by the current user that can challenge
   // Permission: Only token creators can initiate battles
-  const availableTokens =
-    user?.token?.filter(
+  // Added null safety checks to ensure tokens load correctly
+  const availableTokens = useMemo(() => {
+    if (!user?.token || !Array.isArray(user.token)) {
+      return [];
+    }
+
+    return user.token.filter(
       (t) =>
-        t.address &&
-        t.userId === user.id && // Check if user is the creator
-        !isTokenInBattle(t.address as `0x${string}`)
-    ) || [];
+        t && // Token exists
+        t.address && // Has valid address
+        typeof t.address === "string" && // Address is a string
+        t.userId === user.id && // User is the creator
+        !isTokenInBattle(t.address as `0x${string}`) // Not currently in battle
+    );
+  }, [user?.token, user?.id, battles]); // Recompute when user tokens or battles change
 
   // Get all token addresses created by the user (for checking pending challenges)
   const userTokenAddresses =
@@ -610,6 +594,25 @@ export default function Battles() {
     const heatScore = Number(heat) * 0.6;
     const nftScore = Number(nfts) * 0.4;
     return heatScore + nftScore;
+  };
+
+  // Helper: Calculate battle progress percentages for both sides
+  const calculateBattleProgress = (battle: Battle) => {
+    const scoreA = calculateBattleScore(battle.heatA, battle.memeANftsAllocated);
+    const scoreB = calculateBattleScore(battle.heatB, battle.memeBNftsAllocated);
+    const total = scoreA + scoreB;
+    const percentageA = total > 0 ? (scoreA / total) * 100 : 50;
+    const percentageB = 100 - percentageA;
+
+    return { scoreA, scoreB, total, percentageA, percentageB };
+  };
+
+  // Helper: Format address for display
+  const formatAddress = (address: string | undefined): string => {
+    if (!address || typeof address !== 'string' || address.length < 10) {
+      return "N/A";
+    }
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   // State to hold token details map
@@ -984,8 +987,14 @@ export default function Battles() {
                                     {challengerDetails.name}
                                   </p>
                                   <p className="text-white font-mono text-xs">
-                                    {battle.memeA.slice(0, 6)}...
-                                    {battle.memeA.slice(-4)}
+                                    {battle.memeA &&
+                                    typeof battle.memeA === "string" &&
+                                    battle.memeA.length >= 10
+                                      ? `${battle.memeA.slice(
+                                          0,
+                                          6
+                                        )}...${battle.memeA.slice(-4)}`
+                                      : battle.memeA || "N/A"}
                                   </p>
                                 </div>
                               );
@@ -1026,8 +1035,14 @@ export default function Battles() {
                                     {yourTokenDetails.name}
                                   </p>
                                   <p className="text-white font-mono text-xs">
-                                    {battle.memeB.slice(0, 6)}...
-                                    {battle.memeB.slice(-4)}
+                                    {battle.memeB &&
+                                    typeof battle.memeB === "string" &&
+                                    battle.memeB.length >= 10
+                                      ? `${battle.memeB.slice(
+                                          0,
+                                          6
+                                        )}...${battle.memeB.slice(-4)}`
+                                      : battle.memeB || "N/A"}
                                   </p>
                                 </div>
                               );
@@ -1296,8 +1311,14 @@ export default function Battles() {
                                     {tokenDetails.name}
                                   </p>
                                   <p className="text-white font-mono text-xs truncate">
-                                    {battle.memeA.slice(0, 6)}...
-                                    {battle.memeA.slice(-4)}
+                                    {battle.memeA &&
+                                    typeof battle.memeA === "string" &&
+                                    battle.memeA.length >= 10
+                                      ? `${battle.memeA.slice(
+                                          0,
+                                          6
+                                        )}...${battle.memeA.slice(-4)}`
+                                      : battle.memeA || "N/A"}
                                   </p>
                                 </div>
                                 <div className="space-y-1">
@@ -1355,8 +1376,14 @@ export default function Battles() {
                                     {tokenDetails.name}
                                   </p>
                                   <p className="text-white font-mono text-xs truncate">
-                                    {battle.memeB.slice(0, 6)}...
-                                    {battle.memeB.slice(-4)}
+                                    {battle.memeB &&
+                                    typeof battle.memeB === "string" &&
+                                    battle.memeB.length >= 10
+                                      ? `${battle.memeB.slice(
+                                          0,
+                                          6
+                                        )}...${battle.memeB.slice(-4)}`
+                                      : battle.memeB || "N/A"}
                                   </p>
                                 </div>
                                 <div className="space-y-1">
@@ -1381,49 +1408,124 @@ export default function Battles() {
 
                       {/* Battle Progress Bar (for active battles) */}
                       {battle.status === 2 && (
+                        <>
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-neutral-400 mb-2">
+                              <span className="text-green-400">Meme A</span>
+                              <span className="text-orange-400">Meme B</span>
+                            </div>
+                            <div className="w-full bg-gradient-to-r from-green-500/30 to-orange-500/30 rounded-full h-2 overflow-hidden flex">
+                              {(() => {
+                                const { percentageA, percentageB } = calculateBattleProgress(battle);
+                                return (
+                                  <>
+                                    <div
+                                      className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500"
+                                      style={{ width: `${percentageA}%` }}
+                                    />
+                                    <div
+                                      className="bg-gradient-to-r from-orange-500 to-orange-600 h-full transition-all duration-500"
+                                      style={{ width: `${percentageB}%` }}
+                                    />
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* Countdown Timer - Prominent Display */}
+                          <div className="mb-4 bg-neutral-800 border border-neutral-700 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-green-400" />
+                              <span className="text-neutral-300 text-sm font-medium">
+                                Time Remaining
+                              </span>
+                            </div>
+                            <span className="text-green-400 font-bold text-base">
+                              {getTimeRemaining(battle.endTime)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Battle Result Display (for completed battles and draws) */}
+                      {(battle.status === 3 || battle.status === 4) && (
                         <div className="mb-4">
-                          <div className="flex justify-between text-xs text-neutral-400 mb-2">
-                            <span>Meme A</span>
-                            <span>Meme B</span>
-                          </div>
-                          <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
-                            <div
-                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
-                              style={{
-                                width: `${
-                                  battle.heatA + battle.heatB > 0n
-                                    ? (Number(battle.heatA) /
-                                        Number(battle.heatA + battle.heatB)) *
-                                      100
-                                    : 50
-                                }%`,
-                              }}
-                            />
-                          </div>
+                          {battle.status === 4 ? (
+                            /* Draw Result */
+                            <div className="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4">
+                              <div className="flex items-center justify-center gap-2 mb-2">
+                                <Trophy className="w-5 h-5 text-yellow-400" />
+                                <h3 className="text-yellow-400 font-bold text-lg">
+                                  It's a Draw!
+                                </h3>
+                              </div>
+                              <p className="text-neutral-300 text-sm text-center">
+                                Both sides tied with equal scores
+                              </p>
+                              {(() => {
+                                const { scoreA, scoreB } = calculateBattleProgress(battle);
+                                return (
+                                  <div className="mt-3 flex justify-center gap-4 text-sm">
+                                    <div className="text-neutral-400">
+                                      Final Score: <span className="text-white font-semibold">{scoreA.toFixed(1)}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : battle.winner !== "0x0000000000000000000000000000000000000000" ? (
+                            /* Winner Result */
+                            (() => {
+                              const { scoreA, scoreB } = calculateBattleProgress(battle);
+                              const memeAWon = battle.winner.toLowerCase() === battle.memeA.toLowerCase();
+                              const winnerDetails = getTokenDetails(battle.winner);
+                              const loserDetails = getTokenDetails(memeAWon ? battle.memeB : battle.memeA);
+                              const winnerScore = memeAWon ? scoreA : scoreB;
+                              const loserScore = memeAWon ? scoreB : scoreA;
+
+                              return (
+                                <div className="bg-green-500/10 border border-green-500 rounded-lg p-4">
+                                  <div className="flex items-center justify-center gap-2 mb-3">
+                                    <Trophy className="w-5 h-5 text-green-400" />
+                                    <h3 className="text-green-400 font-bold text-lg">
+                                      Battle Complete!
+                                    </h3>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between bg-green-500/20 rounded-lg p-2">
+                                      <div className="flex items-center gap-2">
+                                        <Trophy className="w-4 h-4 text-green-400" />
+                                        <span className="text-green-400 font-semibold text-sm">Winner:</span>
+                                        <span className="text-white font-bold">{winnerDetails.name}</span>
+                                      </div>
+                                      <span className="text-green-400 font-bold">{winnerScore.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-neutral-800 rounded-lg p-2">
+                                      <div className="flex items-center gap-2">
+                                        <X className="w-4 h-4 text-neutral-500" />
+                                        <span className="text-neutral-500 font-semibold text-sm">Lost:</span>
+                                        <span className="text-neutral-400">{loserDetails.name}</span>
+                                      </div>
+                                      <span className="text-neutral-400">{loserScore.toFixed(1)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            /* Ended but no winner (edge case) */
+                            <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4 text-center">
+                              <p className="text-neutral-400 text-sm">Battle ended</p>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {/* Battle Footer */}
-                      <div className="flex items-center justify-between pt-4 border-t border-neutral-800 gap-2">
-                        {battle.status === 2 && (
-                          <div className="flex items-center gap-2 text-sm text-neutral-400">
-                            <Clock className="w-4 h-4" />
-                            <span>{getTimeRemaining(battle.endTime)}</span>
-                          </div>
-                        )}
-                        {battle.status === 3 &&
-                          battle.winner !==
-                            ("0x0000000000000000000000000000000000000000" as `0x${string}`) && (
-                            <div className="flex items-center gap-2 text-sm text-green-400">
-                              <Trophy className="w-4 h-4" />
-                              <span>
-                                Winner: {battle.winner.slice(0, 6)}...
-                                {battle.winner.slice(-4)}
-                              </span>
-                            </div>
-                          )}
-                        <div className="ml-auto flex gap-2">
-                          {/* Allocate NFTs button for active battles */}
+                      <div className="flex items-center justify-end pt-4 border-t border-neutral-800 gap-2">
+                        <div className="flex gap-2">
+                          {/* Allocate NFTs button for active battles only */}
                           {battle.status === 2 && address && (
                             <div className="flex gap-1">
                               {(() => {
@@ -1439,7 +1541,7 @@ export default function Battles() {
                                       onClick={() =>
                                         handleOpenAllocation(battle, "memeA")
                                       }
-                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
                                       title={`Support ${memeADetails.name}`}
                                     >
                                       Support {memeADetails.name}
@@ -1448,7 +1550,7 @@ export default function Battles() {
                                       onClick={() =>
                                         handleOpenAllocation(battle, "memeB")
                                       }
-                                      className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                      className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
                                       title={`Support ${memeBDetails.name}`}
                                     >
                                       Support {memeBDetails.name}
@@ -1458,6 +1560,15 @@ export default function Battles() {
                               })()}
                             </div>
                           )}
+
+                          {/* Battle ended - show info message instead of support buttons */}
+                          {(battle.status === 3 || battle.status === 4 || battle.status === 5) && (
+                            <div className="flex items-center gap-2 text-xs text-neutral-500 italic">
+                              <Clock className="w-3 h-3" />
+                              <span>Battle has ended</span>
+                            </div>
+                          )}
+
                           <button
                             onClick={() => handleOpenDetails(battle)}
                             className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
@@ -1575,11 +1686,12 @@ export default function Battles() {
                     const tokenList =
                       selectingFor === "memeA" ? availableTokens : allTokens;
 
-                    // Filter tokens based on search query (only for Meme B)
+                    // Filter tokens based on debounced search query (only for Meme B)
+                    // Using debounced query improves performance by reducing filtering frequency
                     const filteredTokens =
-                      selectingFor === "memeB" && searchQuery
+                      selectingFor === "memeB" && debouncedSearchQuery
                         ? tokenList.filter((token) => {
-                            const query = searchQuery.toLowerCase();
+                            const query = debouncedSearchQuery.toLowerCase();
                             return (
                               token.metadata?.name
                                 ?.toLowerCase()
@@ -1629,17 +1741,23 @@ export default function Battles() {
                             (token.metadata as any)?.imageKey ||
                             "";
 
+                          // Safely format creator address with null checks
+                          const creatorAddress =
+                            token.userId &&
+                            typeof token.userId === "string" &&
+                            token.userId.length >= 10
+                              ? `${token.userId.slice(
+                                  0,
+                                  6
+                                )}...${token.userId.slice(-4)}`
+                              : "Unknown";
+
                           const tokenData: TokenData = {
                             address: token.address as `0x${string}`,
                             name: token.metadata?.name || "Unnamed Token",
                             ticker: token.metadata?.ticker || "???",
                             image: imageUrl,
-                            creator: token.userId
-                              ? `${token.userId.slice(
-                                  0,
-                                  6
-                                )}...${token.userId.slice(-4)}`
-                              : "Unknown",
+                            creator: creatorAddress,
                           };
 
                           // Check if token is already selected for the opposite slot
@@ -1740,8 +1858,14 @@ export default function Battles() {
                                   </span>
                                 </p>
                                 <p className="text-xs text-neutral-600 font-mono">
-                                  {token.address.slice(0, 6)}...
-                                  {token.address.slice(-4)}
+                                  {token.address &&
+                                  typeof token.address === "string" &&
+                                  token.address.length >= 10
+                                    ? `${token.address.slice(
+                                        0,
+                                        6
+                                      )}...${token.address.slice(-4)}`
+                                    : token.address || "N/A"}
                                 </p>
                               </div>
                             </button>
@@ -1758,13 +1882,23 @@ export default function Battles() {
 
         {/* NFT Allocation Modal */}
         {showAllocateModal && allocationBattle && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowAllocateModal(false)}
+          >
+            <div
+              className="bg-neutral-900 border border-neutral-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Modal Header */}
               <div className="p-6 border-b border-neutral-800">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Users className="w-6 h-6 text-blue-500" />
+                    <Users
+                      className={`w-6 h-6 ${
+                        supportingSide === "memeA" ? "text-green-500" : "text-orange-500"
+                      }`}
+                    />
                     <h2 className="text-xl font-semibold text-white">
                       Allocate Warrior NFTs
                     </h2>
@@ -1816,11 +1950,14 @@ export default function Battles() {
 
               {/* NFT Selection */}
               <div className="p-6">
-                {isLoadingNFTs ? (
+                {(isLoadingNftAddress || isLoadingNFTs) && !activeNFTs ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
+                    <Loader2 className="w-8 h-8 animate-spin text-green-500 mb-4" />
                     <p className="text-neutral-400">
                       Loading your Warrior NFTs...
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-2">
+                      {isLoadingNftAddress ? "Fetching NFT contract..." : "Loading warriors..."}
                     </p>
                   </div>
                 ) : !activeNFTs || activeNFTs.length === 0 ? (
@@ -1830,29 +1967,48 @@ export default function Battles() {
                       No Available Warriors
                     </h3>
                     <p className="text-neutral-400 text-sm mb-4">
-                      You don't have any available Warrior NFTs for this token.
+                      {alreadyAllocatedToThisBattle > 0
+                        ? `You have already allocated ${alreadyAllocatedToThisBattle} warrior${alreadyAllocatedToThisBattle > 1 ? 's' : ''} to this battle.`
+                        : "You don't have any available Warrior NFTs for this token."}
                     </p>
-                    <Link
-                      to="/app/mint"
-                      className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
-                    >
-                      Mint Warriors
-                    </Link>
+                    {alreadyAllocatedToThisBattle === 0 && (
+                      <Link
+                        to="/app/mint"
+                        className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+                      >
+                        Mint Warriors
+                      </Link>
+                    )}
                   </div>
                 ) : (
                   <>
+                    {/* Show subtle loading indicator while refreshing */}
+                    {(isLoadingNftAddress || isLoadingNFTs) && availableNFTsForBattle && (
+                      <div className="mb-4 bg-blue-500/10 border border-blue-500/30 text-blue-400 p-2 rounded-lg flex items-center gap-2 text-xs">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Refreshing warriors...</span>
+                      </div>
+                    )}
                     <div className="mb-4">
                       <p className="text-sm text-neutral-400 mb-2">
                         Select NFTs to allocate ({selectedNFTs.length} selected)
-                        • {availableNFTs} available / {totalNFTs} total
+                        • {availableNFTsCount} available for this battle / {totalNFTs} total
                       </p>
-                      {lockedNFTs > 0 && (
+                      {alreadyAllocatedToThisBattle > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded px-3 py-2 mb-2">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>
+                            ✅ {alreadyAllocatedToThisBattle} Warrior
+                            {alreadyAllocatedToThisBattle > 1 ? "s" : ""} already allocated to this battle
+                          </span>
+                        </div>
+                      )}
+                      {lockedInOtherBattles > 0 && (
                         <div className="flex items-center gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded px-3 py-2">
                           <Shield className="w-3 h-3" />
                           <span>
-                            🔒 {lockedNFTs} Warrior
-                            {lockedNFTs > 1 ? "s are" : " is"} currently locked
-                            in other battles
+                            🔒 {lockedInOtherBattles} Warrior
+                            {lockedInOtherBattles > 1 ? "s are" : " is"} locked in other battles
                           </span>
                         </div>
                       )}
@@ -1860,40 +2016,68 @@ export default function Battles() {
 
                     {/* NFT Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
-                      {activeNFTs.map((nftId) => (
-                        <button
-                          key={nftId.toString()}
-                          onClick={() => toggleNFTSelection(nftId)}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedNFTs.includes(nftId)
-                              ? "border-blue-500 bg-blue-500/10"
-                              : "border-neutral-700 bg-neutral-800 hover:border-neutral-600"
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-2xl mb-2">⚔️</div>
-                            <p className="text-white font-semibold text-sm">
-                              Warrior #{nftId.toString()}
-                            </p>
-                            {selectedNFTs.includes(nftId) && (
-                              <div className="mt-2">
-                                <CheckCircle className="w-5 h-5 text-blue-500 mx-auto" />
+                      {availableNFTsForBattle.map((nftId) => {
+                        const isAllocated = isNFTAllocated(nftId);
+                        return (
+                          <button
+                            key={nftId.toString()}
+                            onClick={() => !isAllocated && toggleNFTSelection(nftId)}
+                            disabled={isAllocated}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              isAllocated
+                                ? "border-neutral-600 bg-neutral-800/50 opacity-50 cursor-not-allowed"
+                                : selectedNFTs.includes(nftId)
+                                ? supportingSide === "memeA"
+                                  ? "border-green-500 bg-green-500/10 cursor-pointer"
+                                  : "border-orange-500 bg-orange-500/10 cursor-pointer"
+                                : "border-neutral-700 bg-neutral-800 hover:border-neutral-600 cursor-pointer"
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-2xl mb-2">
+                                {isAllocated ? "🔒" : "⚔️"}
                               </div>
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                              <p className={`font-semibold text-sm ${isAllocated ? "text-neutral-500" : "text-white"}`}>
+                                Warrior #{nftId.toString()}
+                              </p>
+                              {isAllocated ? (
+                                <div className="mt-2">
+                                  <p className="text-xs text-neutral-500">
+                                    Already Allocated
+                                  </p>
+                                </div>
+                              ) : selectedNFTs.includes(nftId) ? (
+                                <div className="mt-2">
+                                  <CheckCircle
+                                    className={`w-5 h-5 mx-auto ${
+                                      supportingSide === "memeA"
+                                        ? "text-green-500"
+                                        : "text-orange-500"
+                                    }`}
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {/* Info Box */}
-                    <div className="bg-blue-500/10 border border-blue-500 text-blue-400 p-3 rounded-lg mb-4 text-sm">
+                    {/* Info Box - Color matches supported token */}
+                    <div
+                      className={`p-3 rounded-lg mb-4 text-sm ${
+                        supportingSide === "memeA"
+                          ? "bg-green-500/10 border border-green-500 text-green-400"
+                          : "bg-orange-500/10 border border-orange-500 text-orange-400"
+                      }`}
+                    >
                       <Shield className="w-4 h-4 inline mr-2" />
                       Selected NFTs will be locked for the duration of the
                       battle. They contribute to your side's total support value
                       (40% of battle score).
                     </div>
 
-                    {/* Allocate Button */}
+                    {/* Allocate Button - Color matches supported token */}
                     <button
                       onClick={handleAllocateNFTs}
                       disabled={
@@ -1901,7 +2085,11 @@ export default function Battles() {
                         isAllocatePending ||
                         isAllocateConfirming
                       }
-                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      className={`w-full disabled:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                        supportingSide === "memeA"
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-orange-600 hover:bg-orange-700"
+                      }`}
                     >
                       {isAllocatePending || isAllocateConfirming ? (
                         <>
@@ -1927,8 +2115,14 @@ export default function Battles() {
 
         {/* Battle Details Modal */}
         {showDetailsModal && detailsBattle && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDetailsModal(false)}
+          >
+            <div
+              className="bg-neutral-900 border border-neutral-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Modal Header */}
               <div className="p-6 border-b border-neutral-800">
                 <div className="flex items-center justify-between mb-2">
@@ -1959,7 +2153,7 @@ export default function Battles() {
                 {/* Battle Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Meme A */}
-                  <div className="bg-neutral-800 rounded-lg p-4 border-2 border-blue-500/30">
+                  <div className="bg-neutral-800 rounded-lg p-4 border-2 border-green-500/30">
                     {(() => {
                       const tokenDetails = getTokenDetails(detailsBattle.memeA);
                       return (
@@ -1982,12 +2176,18 @@ export default function Battles() {
                             </div>
                           )}
                           <div className="text-center mb-4">
-                            <h3 className="text-lg font-semibold text-blue-400 mb-2">
+                            <h3 className="text-lg font-semibold text-green-400 mb-2">
                               {tokenDetails.name}
                             </h3>
                             <p className="text-white font-mono text-xs break-all">
-                              {detailsBattle.memeA.slice(0, 6)}...
-                              {detailsBattle.memeA.slice(-4)}
+                              {detailsBattle.memeA &&
+                              typeof detailsBattle.memeA === "string" &&
+                              detailsBattle.memeA.length >= 10
+                                ? `${detailsBattle.memeA.slice(
+                                    0,
+                                    6
+                                  )}...${detailsBattle.memeA.slice(-4)}`
+                                : detailsBattle.memeA || "N/A"}
                             </p>
                           </div>
 
@@ -2035,7 +2235,7 @@ export default function Battles() {
                   </div>
 
                   {/* Meme B */}
-                  <div className="bg-neutral-800 rounded-lg p-4 border-2 border-purple-500/30">
+                  <div className="bg-neutral-800 rounded-lg p-4 border-2 border-orange-500/30">
                     {(() => {
                       const tokenDetails = getTokenDetails(detailsBattle.memeB);
                       return (
@@ -2058,12 +2258,18 @@ export default function Battles() {
                             </div>
                           )}
                           <div className="text-center mb-4">
-                            <h3 className="text-lg font-semibold text-purple-400 mb-2">
+                            <h3 className="text-lg font-semibold text-orange-400 mb-2">
                               {tokenDetails.name}
                             </h3>
                             <p className="text-white font-mono text-xs break-all">
-                              {detailsBattle.memeB.slice(0, 6)}...
-                              {detailsBattle.memeB.slice(-4)}
+                              {detailsBattle.memeB &&
+                              typeof detailsBattle.memeB === "string" &&
+                              detailsBattle.memeB.length >= 10
+                                ? `${detailsBattle.memeB.slice(
+                                    0,
+                                    6
+                                  )}...${detailsBattle.memeB.slice(-4)}`
+                                : detailsBattle.memeB || "N/A"}
                             </p>
                           </div>
 
@@ -2120,28 +2326,26 @@ export default function Battles() {
                     <div className="space-y-4">
                       {/* Score Comparison */}
                       <div>
-                        <div className="flex justify-between text-sm text-neutral-400 mb-2">
-                          <span>Meme A Leading</span>
-                          <span>Meme B Leading</span>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-green-400 font-medium">Meme A</span>
+                          <span className="text-orange-400 font-medium">Meme B</span>
                         </div>
-                        <div className="w-full bg-neutral-700 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
-                            style={{
-                              width: `${(() => {
-                                const scoreA = calculateBattleScore(
-                                  detailsBattle.heatA,
-                                  detailsBattle.memeANftsAllocated
-                                );
-                                const scoreB = calculateBattleScore(
-                                  detailsBattle.heatB,
-                                  detailsBattle.memeBNftsAllocated
-                                );
-                                const total = scoreA + scoreB;
-                                return total > 0 ? (scoreA / total) * 100 : 50;
-                              })()}%`,
-                            }}
-                          />
+                        <div className="w-full bg-gradient-to-r from-green-500/20 to-orange-500/20 rounded-full h-4 overflow-hidden flex">
+                          {(() => {
+                            const { percentageA, percentageB } = calculateBattleProgress(detailsBattle);
+                            return (
+                              <>
+                                <div
+                                  className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500"
+                                  style={{ width: `${percentageA}%` }}
+                                />
+                                <div
+                                  className="bg-gradient-to-r from-orange-500 to-orange-600 h-full transition-all duration-500"
+                                  style={{ width: `${percentageB}%` }}
+                                />
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="flex justify-between text-xs text-neutral-500 mt-1">
                           <span>
@@ -2260,7 +2464,7 @@ export default function Battles() {
                               setShowDetailsModal(false);
                               handleOpenAllocation(detailsBattle, "memeA");
                             }}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
                           >
                             Support {memeADetails.name}
                           </button>
@@ -2269,7 +2473,7 @@ export default function Battles() {
                               setShowDetailsModal(false);
                               handleOpenAllocation(detailsBattle, "memeB");
                             }}
-                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
                           >
                             Support {memeBDetails.name}
                           </button>

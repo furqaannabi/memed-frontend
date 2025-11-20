@@ -149,3 +149,35 @@ export function useHasActiveWarrior(
     },
   });
 }
+
+/**
+ * Hook to get the current mint price for a warrior NFT.
+ * Price is dynamically calculated based on heat score.
+ * @param nftAddress The address of the MemedWarriorNFT contract.
+ */
+export function useGetCurrentPrice(nftAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: nftAddress,
+    abi: memedWarriorNFTAbi,
+    functionName: "getCurrentPrice",
+    query: {
+      enabled: !!nftAddress,
+      refetchInterval: 30000, // Refetch every 30 seconds for price updates
+    },
+  });
+}
+
+/**
+ * Hook to get the base price constant for warrior NFT minting.
+ * @param nftAddress The address of the MemedWarriorNFT contract.
+ */
+export function useGetBasePrice(nftAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: nftAddress,
+    abi: memedWarriorNFTAbi,
+    functionName: "BASE_PRICE",
+    query: {
+      enabled: !!nftAddress,
+    },
+  });
+}

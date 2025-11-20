@@ -53,7 +53,11 @@ export default function MintWarriors() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-2 space-y-6">
-            <MintPriceAndHeat />
+            <MintPriceAndHeat
+              warriorNFTAddress={warriorNFTAddress}
+              tokenAddress={token?.address as `0x${string}` | undefined}
+              tokenSymbol={token?.metadata?.ticker}
+            />
             <PriceHistory
               warriorNFTAddress={warriorNFTAddress}
               tokenName={tokenName}
@@ -65,6 +69,7 @@ export default function MintWarriors() {
             <MintWarriorPanel
               warriorNFTAddress={warriorNFTAddress}
               tokenName={tokenName}
+              tokenSymbol={token?.metadata?.ticker}
             />
           </div>
         </div>

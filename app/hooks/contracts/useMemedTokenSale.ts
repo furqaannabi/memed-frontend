@@ -75,6 +75,38 @@ export function useGetUserCommitment(
 }
 
 /**
+ * Hook to get the expected claim for a user in a fair launch.
+ * Returns the actual token amount and refund amount the user will receive.
+ * This accounts for oversubscription - if the launch is oversubscribed,
+ * users get proportional tokens and a refund of excess ETH.
+ * Polls every 5 seconds to keep data up-to-date in real-time.
+ * @param launchId The ID of the fair launch.
+ * @param userAddress The address of the user (optional, defaults to connected wallet).
+ * @returns Object with tokens (bigint) and refundAmount (bigint)
+ */
+export function useGetExpectedClaim(
+  launchId: bigint,
+  userAddress?: `0x${string}`,
+) {
+  const { address: connectedAddress } = useAccount();
+  const addressToQuery = userAddress || connectedAddress;
+
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "getExpectedClaim",
+    args: [
+      launchId,
+      addressToQuery ?? "0x0000000000000000000000000000000000000000",
+    ],
+    query: {
+      enabled: !!launchId && !!addressToQuery,
+      refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+    },
+  });
+}
+
+/**
  * Hook for the `commitToFairLaunch` write function.
  * This function takes _id and amount as parameters.
  */

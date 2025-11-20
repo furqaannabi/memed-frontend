@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SwordsIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { BattleCard } from "@/components/shared/BattleCard";
 import { useGetBattles } from "@/hooks/contracts/useMemedBattle";
+import { useAuthStore } from "@/store/auth";
+import { apiClient } from "@/lib/api/client";
 
 // Battle status enum
 type BattleStatus = 0 | 1 | 2 | 3;
@@ -31,6 +33,14 @@ const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const battlesPerPage = 2;
 
+  // State to hold token details
+  const [tokenDetailsMap, setTokenDetailsMap] = useState<
+    Record<string, { name: string; image: string }>
+  >({});
+
+  // Get user's tokens from auth store
+  const { user } = useAuthStore();
+
   // Fetch all battles from contract
   const { data: battlesData, isLoading } = useGetBattles();
   const battles: Battle[] = (battlesData as Battle[]) || [];
@@ -44,6 +54,60 @@ const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
           battle.memeB.toLowerCase() === tokenAddress.toLowerCase())
     );
   }, [battles, tokenAddress]);
+
+  // Fetch token details for all tokens in active battles
+  useEffect(() => {
+    const fetchTokenDetails = async () => {
+      const newTokenDetailsMap: Record<string, { name: string; image: string }> = {};
+
+      // Add user's tokens first
+      if (user?.token) {
+        user.token.forEach((token) => {
+          if (token.address) {
+            newTokenDetailsMap[token.address.toLowerCase()] = {
+              name: token.metadata?.name || `${token.address.slice(0, 6)}...`,
+              image: token.image?.s3Key || (token.metadata as any)?.imageKey || "",
+            };
+          }
+        });
+      }
+
+      // Get unique token addresses from active battles
+      const uniqueAddresses = new Set<string>();
+      activeBattles.forEach((battle) => {
+        uniqueAddresses.add(battle.memeA.toLowerCase());
+        uniqueAddresses.add(battle.memeB.toLowerCase());
+      });
+
+      // Fetch details for tokens not in user's list
+      for (const address of uniqueAddresses) {
+        if (!newTokenDetailsMap[address]) {
+          try {
+            const response = await apiClient.get(`/api/token-by-address/${address}`);
+            const tokenData = response.data as any;
+            if (tokenData && tokenData.metadata) {
+              newTokenDetailsMap[address] = {
+                name: tokenData.metadata.name || `${address.slice(0, 6)}...`,
+                image: tokenData.metadata.imageKey || tokenData.image?.s3Key || "",
+              };
+            }
+          } catch (error) {
+            // Fallback
+            newTokenDetailsMap[address] = {
+              name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+              image: "",
+            };
+          }
+        }
+      }
+
+      setTokenDetailsMap(newTokenDetailsMap);
+    };
+
+    if (activeBattles.length > 0) {
+      fetchTokenDetails();
+    }
+  }, [activeBattles, user]);
 
   // Calculate pagination
   const totalPages = Math.ceil(activeBattles.length / battlesPerPage);
@@ -121,16 +185,22 @@ const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
         // Battle Cards Grid
         <div className="grid lg:grid-cols-2 gap-6">
           {currentBattles.map((battle) => {
-            const side = getTokenSide(battle);
-            const isLeft = side === "left";
+            const memeADetails = tokenDetailsMap[battle.memeA.toLowerCase()] || {
+              name: `${battle.memeA.slice(0, 6)}...`,
+              image: "",
+            };
+            const memeBDetails = tokenDetailsMap[battle.memeB.toLowerCase()] || {
+              name: `${battle.memeB.slice(0, 6)}...`,
+              image: "",
+            };
 
             return (
               <BattleCard
                 key={Number(battle.battleId)}
-                leftImage="" // You can add token images from metadata if available
-                rightImage=""
-                leftLabel={isLeft ? "This Token" : `Battle ${battle.battleId}`}
-                rightLabel={isLeft ? `Battle ${battle.battleId}` : "This Token"}
+                leftImage={memeADetails.image}
+                rightImage={memeBDetails.image}
+                leftLabel={memeADetails.name}
+                rightLabel={memeBDetails.name}
                 leftViews={`${Number(battle.heatA).toLocaleString()} Heat`}
                 rightViews={`${Number(battle.heatB).toLocaleString()} Heat`}
               />

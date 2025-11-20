@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Trophy, ChevronLeft, ChevronRight, Loader2, Clock } from "lucide-react";
 import { useGetBattles } from "@/hooks/contracts/useMemedBattle";
 import { formatEther } from "viem";
+import { useAuthStore } from "@/store/auth";
+import { apiClient } from "@/lib/api/client";
 
-// Battle status enum
-type BattleStatus = 0 | 1 | 2 | 3;
+// Battle status enum - include DRAW (status 4)
+type BattleStatus = 0 | 1 | 2 | 3 | 4;
 
 // Battle interface from contract
 interface Battle {
@@ -31,21 +33,83 @@ const BattleHistory = ({ tokenAddress }: BattleHistoryProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const battlesPerPage = 5;
 
+  // State to hold token details
+  const [tokenDetailsMap, setTokenDetailsMap] = useState<
+    Record<string, { name: string; image: string }>
+  >({});
+
+  // Get user's tokens from auth store
+  const { user } = useAuthStore();
+
   // Fetch all battles from contract
   const { data: battlesData, isLoading } = useGetBattles();
   const battles: Battle[] = (battlesData as Battle[]) || [];
 
-  // Filter for completed battles (RESOLVED status = 3) involving this token
+  // Filter for completed battles (RESOLVED status = 3 or DRAW status = 4) involving this token
   const completedBattles = useMemo(() => {
     return battles
       .filter(
         (battle) =>
-          battle.status === 3 && // RESOLVED (Completed)
+          (battle.status === 3 || battle.status === 4) && // RESOLVED or DRAW
           (battle.memeA.toLowerCase() === tokenAddress.toLowerCase() ||
             battle.memeB.toLowerCase() === tokenAddress.toLowerCase())
       )
       .sort((a, b) => Number(b.endTime) - Number(a.endTime)); // Sort by most recent first
   }, [battles, tokenAddress]);
+
+  // Fetch token details for all tokens in completed battles
+  useEffect(() => {
+    const fetchTokenDetails = async () => {
+      const newTokenDetailsMap: Record<string, { name: string; image: string }> = {};
+
+      // Add user's tokens first
+      if (user?.token) {
+        user.token.forEach((token) => {
+          if (token.address) {
+            newTokenDetailsMap[token.address.toLowerCase()] = {
+              name: token.metadata?.name || `${token.address.slice(0, 6)}...`,
+              image: token.image?.s3Key || (token.metadata as any)?.imageKey || "",
+            };
+          }
+        });
+      }
+
+      // Get unique token addresses from completed battles
+      const uniqueAddresses = new Set<string>();
+      completedBattles.forEach((battle) => {
+        uniqueAddresses.add(battle.memeA.toLowerCase());
+        uniqueAddresses.add(battle.memeB.toLowerCase());
+      });
+
+      // Fetch details for tokens not in user's list
+      for (const address of uniqueAddresses) {
+        if (!newTokenDetailsMap[address]) {
+          try {
+            const response = await apiClient.get(`/api/token-by-address/${address}`);
+            const tokenData = response.data as any;
+            if (tokenData && tokenData.metadata) {
+              newTokenDetailsMap[address] = {
+                name: tokenData.metadata.name || `${address.slice(0, 6)}...`,
+                image: tokenData.metadata.imageKey || tokenData.image?.s3Key || "",
+              };
+            }
+          } catch (error) {
+            // Fallback
+            newTokenDetailsMap[address] = {
+              name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+              image: "",
+            };
+          }
+        }
+      }
+
+      setTokenDetailsMap(newTokenDetailsMap);
+    };
+
+    if (completedBattles.length > 0) {
+      fetchTokenDetails();
+    }
+  }, [completedBattles, user]);
 
   // Calculate pagination
   const totalPages = Math.ceil(completedBattles.length / battlesPerPage);
@@ -67,13 +131,18 @@ const BattleHistory = ({ tokenAddress }: BattleHistoryProps) => {
     return battle.winner.toLowerCase() === tokenAddress.toLowerCase();
   };
 
-  // Helper to get opponent address
-  const getOpponentAddress = (battle: Battle): string => {
-    const opponent =
+  // Helper to get opponent details
+  const getOpponentDetails = (battle: Battle): { name: string; address: string } => {
+    const opponentAddress =
       battle.memeA.toLowerCase() === tokenAddress.toLowerCase()
         ? battle.memeB
         : battle.memeA;
-    return `${opponent.slice(0, 6)}...${opponent.slice(-4)}`;
+
+    const details = tokenDetailsMap[opponentAddress.toLowerCase()];
+    return {
+      name: details?.name || `${opponentAddress.slice(0, 6)}...${opponentAddress.slice(-4)}`,
+      address: opponentAddress,
+    };
   };
 
   // Helper to format time ago
@@ -144,8 +213,9 @@ const BattleHistory = ({ tokenAddress }: BattleHistoryProps) => {
         // Battle List
         <div className="space-y-3">
           {currentBattles.map((battle) => {
-            const won = didTokenWin(battle);
-            const opponent = getOpponentAddress(battle);
+            const isDraw = battle.status === 4;
+            const won = !isDraw && didTokenWin(battle);
+            const opponent = getOpponentDetails(battle);
             const timeAgo = getTimeAgo(battle.endTime);
             const reward = formatEther(battle.totalReward);
 
@@ -159,14 +229,18 @@ const BattleHistory = ({ tokenAddress }: BattleHistoryProps) => {
                   {/* Status dot */}
                   <div
                     className={`w-3 h-3 rounded-full ${
-                      won ? "bg-green-500" : "bg-red-500"
+                      isDraw
+                        ? "bg-yellow-500"
+                        : won
+                        ? "bg-green-500"
+                        : "bg-red-500"
                     }`}
                   ></div>
 
                   {/* Battle details */}
                   <div>
                     <div className="text-white text-sm font-medium">
-                      vs {opponent}
+                      vs {opponent.name}
                     </div>
                     <div className="text-neutral-400 text-xs flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -175,16 +249,24 @@ const BattleHistory = ({ tokenAddress }: BattleHistoryProps) => {
                   </div>
                 </div>
 
-                {/* Right side - amount */}
+                {/* Right side - result/amount */}
                 <div
                   className={`text-sm font-medium px-3 py-1 rounded-full ${
-                    won
+                    isDraw
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : won
                       ? "bg-green-500/20 text-green-400"
                       : "bg-red-500/20 text-red-400"
                   }`}
                 >
-                  {won ? "+" : ""}
-                  {parseFloat(reward).toFixed(4)} tokens
+                  {isDraw ? (
+                    "Draw"
+                  ) : (
+                    <>
+                      {won ? "+" : ""}
+                      {parseFloat(reward).toFixed(4)} tokens
+                    </>
+                  )}
                 </div>
               </div>
             );

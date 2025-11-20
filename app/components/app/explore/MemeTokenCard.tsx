@@ -33,9 +33,9 @@ export function MemeTokenCard({ token }: MemeTokenCardProps) {
   const { data: isRefundable } = useIsRefundable(contractTokenId);
 
   // Determine current phase based on contract data
-  // status: 1 = Funding, 2 = Ready, 3 = Launched, 4 = Failed
+  // FairLaunchStatus enum: 0 = NOT_STARTED, 1 = ACTIVE, 2 = COMPLETED, 3 = FAILED
   const status = fairLaunchData ? fairLaunchData[0] : 0;
-  const isFailed = isRefundable === true || status === 4;
+  const isFailed = isRefundable === true || status === 3;
 
   return (
     <Link
@@ -81,13 +81,9 @@ export function MemeTokenCard({ token }: MemeTokenCardProps) {
               <span className="text-red-500 bg-red-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
                 <XCircle size={12} /> Failed
               </span>
-            ) : status === 3 ? (
+            ) : status === 2 ? (
               <span className="text-green-500 bg-green-900/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
                 <Rocket size={12} /> Launched
-              </span>
-            ) : status === 2 ? (
-              <span className="text-neutral-300 bg-neutral-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">
-                <Rocket size={12} /> Ready
               </span>
             ) : status === 1 ? (
               <span className="text-yellow-500 bg-yellow-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0 flex gap-1 items-center">

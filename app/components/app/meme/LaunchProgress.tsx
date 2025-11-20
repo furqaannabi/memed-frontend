@@ -69,8 +69,15 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   const fairLaunchStartTime = fairLaunchData ? fairLaunchData[1] : 0n;
   const fairLaunchStatus = fairLaunchData ? fairLaunchData[0] : 0;
   
+  // Calculate progress percentage (can exceed 100% for oversubscription)
   const progressPercentage = TARGET_ETH > 0n
-    ? Math.min(Number((totalCommitted * 100n) / TARGET_ETH), 100)
+    ? Number((totalCommitted * 100n) / TARGET_ETH)
+    : 0;
+
+  // Calculate oversubscription if launch exceeds target
+  const isOversubscribed = totalCommitted > TARGET_ETH;
+  const oversubscriptionPercentage = isOversubscribed
+    ? Number(((totalCommitted - TARGET_ETH) * 100n) / TARGET_ETH)
     : 0;
 
   // Show network error if on wrong chain
@@ -179,19 +186,41 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
         <CountdownTimer tokenId={tokenId} />
       </div>
 
-      {/* Progress Bar - Updated with green theme for success/commitment tracking */}
+      {/* Progress Bar - Shows commitment progress, changes color when oversubscribed */}
       <div className="w-full bg-neutral-800 h-3 rounded-full mb-2">
         <div
-          className="bg-gradient-to-r from-green-500 to-green-400 h-3 rounded-full transition-all duration-300 shadow-lg shadow-green-500/20"
-          style={{ width: `${progressPercentage}%` }}
+          className={`h-3 rounded-full transition-all duration-300 ${
+            isOversubscribed
+              ? 'bg-gradient-to-r from-yellow-500 to-orange-400 shadow-lg shadow-orange-500/20'
+              : 'bg-gradient-to-r from-green-500 to-green-400 shadow-lg shadow-green-500/20'
+          }`}
+          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
         />
       </div>
-      <div className="flex justify-between text-sm text-neutral-400 mb-6">
+      <div className="flex justify-between text-sm text-neutral-400 mb-2">
         <span>{progressPercentage.toFixed(1)}% Complete ({formatTokenAmount(formatEther(totalCommitted))} ETH)</span>
         <span>
           {formatTokenAmount(formatEther(totalCommitted))} / {formatTokenAmount(formatEther(TARGET_ETH))} ETH
         </span>
       </div>
+
+      {/* Oversubscription Notice - Shows when commitment exceeds target */}
+      {isOversubscribed && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 mb-6">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-orange-400 font-semibold text-sm mb-1">
+                Oversubscribed by {oversubscriptionPercentage.toFixed(1)}%
+              </div>
+              <div className="text-neutral-300 text-xs">
+                This launch has exceeded its {formatTokenAmount(formatEther(TARGET_ETH))} ETH target.
+                Tokens will be allocated proportionally and excess ETH will be refunded to participants.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid - Display formatted token amounts for better readability */}
       <div className="grid grid-cols-2 gap-4">

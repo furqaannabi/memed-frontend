@@ -20,7 +20,9 @@ export default function PriceHistory({
   // Fetch real price history from blockchain events
   const { priceHistory, isLoading, error } = useWarriorPriceHistory(warriorNFTAddress);
 
-  if (isLoading) {
+  // Only show loading state on initial load (when we have no data yet)
+  // Keep chart visible during subsequent refetches to avoid flickering
+  if (isLoading && (!priceHistory || priceHistory.length === 0)) {
     return (
       <div className="bg-neutral-900 p-6 rounded-xl">
         <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
@@ -31,7 +33,8 @@ export default function PriceHistory({
     );
   }
 
-  if (error) {
+  // Only show error if we have no data to display
+  if (error && (!priceHistory || priceHistory.length === 0)) {
     return (
       <div className="bg-neutral-900 p-6 rounded-xl">
         <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
@@ -44,7 +47,7 @@ export default function PriceHistory({
     );
   }
 
-  if (priceHistory.length === 0) {
+  if (!priceHistory || priceHistory.length === 0) {
     return (
       <div className="bg-neutral-900 p-6 rounded-xl">
         <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
@@ -84,7 +87,17 @@ export default function PriceHistory({
   const areaPathData = `${pathData} L ${points[points.length - 1].x} ${height - padding} L ${padding} ${height - padding} Z`;
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl">
+    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl relative">
+      {/* Subtle loading indicator during refetches - doesn't replace the chart */}
+      {isLoading && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="flex items-center gap-2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+            Updating...
+          </div>
+        </div>
+      )}
+
       <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
         <TrendingUp className="text-green-500" /> Price History
       </h2>

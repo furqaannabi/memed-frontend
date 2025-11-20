@@ -65,26 +65,54 @@ export default function Meme() {
   useEffect(() => {
     if (fairLaunchData) {
       const status = fairLaunchData[0]; // status is at index 0
-      console.log("fair launch data", fairLaunchData, contractTokenId);
+      const fairLaunchStartTime = fairLaunchData[1];
+      const totalCommitted = fairLaunchData[2];
+      const totalSold = fairLaunchData[3];
+      const uniswapPair = fairLaunchData[4];
+      const createdAt = fairLaunchData[5];
 
-      // PRIORITY: Check if refundable (failed launch)
-      // This covers both explicit status 4 AND other failure conditions (time expired, etc.)
-      console.log("isRefundable", isRefundable);
-      if (isRefundable === true || status === 4) {
+      console.log("=== FAIR LAUNCH DEBUG ===");
+      console.log("Contract Token ID:", contractTokenId.toString());
+      console.log("Status (0=NOT_STARTED, 1=ACTIVE, 2=COMPLETED, 3=FAILED):", status);
+      console.log("Fair Launch Start Time:", new Date(Number(fairLaunchStartTime) * 1000).toLocaleString());
+      console.log("Total Committed (wei):", totalCommitted.toString());
+      console.log("Total Sold (wei):", totalSold.toString());
+      console.log("Uniswap Pair Address:", uniswapPair);
+      console.log("Created At:", new Date(Number(createdAt) * 1000).toLocaleString());
+      console.log("Is Refundable:", isRefundable);
+      console.log("Current Phase:", currentPhase);
+      console.log("========================");
+
+      // CORRECT STATUS MAPPING based on FairLaunchStatus enum:
+      // 0 = NOT_STARTED, 1 = ACTIVE, 2 = COMPLETED, 3 = FAILED
+
+      // PRIORITY: Check if failed (status 3) or refundable
+      if (isRefundable === true || status === 3) {
+        console.log("→ Setting phase to 4 (FAILED - Refundable)");
         setCurrentPhase(4); // Failed launch - show RefundPanel
         setActive(false);
       } else if (status === 1) {
-        setCurrentPhase(1); // Commitment phase
+        console.log("→ Setting phase to 1 (ACTIVE - Commitment Phase)");
+        setCurrentPhase(1); // Active - commitment phase
         setActive(false);
       } else if (status === 2) {
-        setCurrentPhase(2); // Ready to launch phase
-        setActive(false);
-      } else if (status === 3) {
-        setCurrentPhase(3); // Launched phase - show ClaimPanel
+        console.log("→ Setting phase to 3 (COMPLETED - Tokens Claimable!)");
+        console.log("   Status 2 = COMPLETED means fair launch succeeded and tokens are claimable.");
+        setCurrentPhase(3); // COMPLETED - show ClaimPanel (tokens claimable)
         setActive(true);
+      } else if (status === 0) {
+        console.log("→ Status 0 (NOT_STARTED) - defaulting to phase 1");
+        setCurrentPhase(1);
+        setActive(false);
+      } else {
+        console.log("→ Unknown status:", status, "- defaulting to phase 1");
+        setCurrentPhase(1);
+        setActive(false);
       }
+    } else {
+      console.log("No fairLaunchData available yet");
     }
-  }, [fairLaunchData, isRefundable, currentPhase]);
+  }, [fairLaunchData, isRefundable, contractTokenId, currentPhase]);
 
   // Callback to refresh launch progress when commit succeeds
   const handleCommitSuccess = useCallback(() => {

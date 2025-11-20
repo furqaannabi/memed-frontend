@@ -1,8 +1,31 @@
 import meme from "@/assets/images/meme.png";
 import { Link } from "react-router";
-import { Barcode, ChevronRight, MoveUpRight } from "lucide-react";
+import { Barcode, ChevronRight, Flame, TrendingUp } from "lucide-react";
 
-export function Intro() {
+// Props interface for real data
+interface IntroProps {
+  totalTokens?: number;
+  totalHeat?: number;
+}
+
+/**
+ * Intro Component
+ *
+ * Displays the hero section of the Explorer page with:
+ * - Call to action to create new tokens
+ * - Real-time stats (total tokens launched and total heat score)
+ *
+ * @param totalTokens - Total number of tokens launched on the platform
+ * @param totalHeat - Cumulative heat score across all tokens
+ */
+export function Intro({ totalTokens = 0, totalHeat = 0 }: IntroProps) {
+  // Format large numbers for display
+  const formatNumber = (num: number): string => {
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+    if (num >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
+    return num.toString();
+  };
+
   return (
     <div className="bg-neutral-900 text-white  rounded-xl border border-neutral-800 p-4 md:p-6">
       <div className=" mx-auto">
@@ -39,20 +62,20 @@ export function Intro() {
             </Link>
           </div>
 
-          {/* Right stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2   h-full items-end  gap-3 col-span-1 md:col-span-2 xl:col-span-2 px-2">
+          {/* Right stats - Real platform statistics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 h-full items-end gap-3 col-span-1 md:col-span-2 xl:col-span-2 px-2">
             <div className="space-y-2 bg-dark-900 rounded-md p-3">
-              <p className="text-gray-400 text-xs">Total Market Cap</p>
+              <p className="text-gray-400 text-xs">Total Tokens Launched</p>
               <div className="flex items-center gap-2 justify-between">
-                <p className="text-sm ">$808,102,430</p>
-                <Barcode className="text-primary-900" />
+                <p className="text-sm font-semibold">{formatNumber(totalTokens)}</p>
+                <TrendingUp className="text-primary-500 w-4 h-4" />
               </div>
             </div>
             <div className="space-y-2 bg-dark-900 rounded-md p-3">
-              <p className="text-gray-400 text-xs">Total Volume</p>
+              <p className="text-gray-400 text-xs">Total Heat Score</p>
               <div className="flex items-center gap-2 justify-between">
-                <p className="text-sm ">$808,102,430</p>
-                <Barcode className="text-primary-900" />
+                <p className="text-sm font-semibold">{formatNumber(totalHeat)}</p>
+                <Flame className="text-orange-500 w-4 h-4" />
               </div>
             </div>
           </div>

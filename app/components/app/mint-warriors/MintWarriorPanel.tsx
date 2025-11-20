@@ -36,6 +36,7 @@ type FlowState =
 interface MintWarriorPanelProps {
   warriorNFTAddress: `0x${string}` | undefined;
   tokenName?: string;
+  tokenSymbol?: string; // Token symbol for display (e.g., "MEME", "PEPE")
 }
 
 /**
@@ -51,6 +52,7 @@ interface MintWarriorPanelProps {
 export default function MintWarriorPanel({
   warriorNFTAddress,
   tokenName = "Warriors",
+  tokenSymbol = "MEME",
 }: MintWarriorPanelProps) {
   const { address: userAddress } = useAccount();
 
@@ -273,7 +275,7 @@ export default function MintWarriorPanel({
           <span className="text-gray-400 text-sm">Current Price:</span>
           <span className="text-white font-semibold text-lg">
             {currentPrice ? (
-              `${formatTokenAmount(formatEther(currentPrice))} ${tokenName}`
+              `${formatTokenAmount(formatEther(currentPrice))} ${tokenSymbol}`
             ) : (
               <Loader2 className="w-4 h-4 animate-spin inline" />
             )}
@@ -283,7 +285,7 @@ export default function MintWarriorPanel({
           <span className="text-gray-400 text-sm">Your Balance:</span>
           <span className="text-green-400 font-semibold text-lg">
             {userBalance !== undefined ? (
-              `${formatTokenAmount(formatEther(userBalance))} ${tokenName}`
+              `${formatTokenAmount(formatEther(userBalance))} ${tokenSymbol}`
             ) : (
               <Loader2 className="w-4 h-4 animate-spin inline" />
             )}
