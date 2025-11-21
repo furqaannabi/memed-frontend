@@ -206,7 +206,9 @@ export default function Battles() {
   // Get list of NFT IDs already allocated to this battle
   // userBattleAllocations is a tuple: [battleId, user, supportedMeme, nftsIds[], claimed, getBack]
   // nftsIds is at index 3
-  const allocatedNFTsArray = userBattleAllocations?.[3] as bigint[] | undefined;
+  const allocatedNFTsArray = userBattleAllocations
+    ? (userBattleAllocations as any)[3] as bigint[] | undefined
+    : undefined;
   const allocatedNFTIds = allocatedNFTsArray && Array.isArray(allocatedNFTsArray)
     ? allocatedNFTsArray
     : [];

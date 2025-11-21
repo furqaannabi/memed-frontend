@@ -44,6 +44,8 @@ export interface Token {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  heat?: bigint | number; // Heat score from contract, used for leaderboard
+  phase?: string; // Token phase (e.g., "COMPLETED", "REVEAL", "COMMIT")
 }
 
 export interface Social {

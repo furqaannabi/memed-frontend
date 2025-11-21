@@ -8,6 +8,9 @@ interface MemeToken {
   price: number;
   marketCap: string;
   progress: number;
+  image: string; // Token image URL/key
+  fairLaunchId?: string; // Fair launch ID for fetching contract status
+  address?: string; // Token contract address
   active?: boolean;
   badge?: string;
   badgeColor?: string;
@@ -22,6 +25,8 @@ type SortOption = "new" | "popular" | "marketCap";
 
 export function MemeTokensList({ tokens }: MemeTokensListProps) {
   const [sortBy, setSortBy] = useState<SortOption>("new");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9; // Show 9 tokens per page (3x3 grid on xl screens)
 
   // Sort tokens based on selected option
   const sortedTokens = useMemo(() => {
@@ -48,6 +53,67 @@ export function MemeTokensList({ tokens }: MemeTokensListProps) {
         return tokensCopy;
     }
   }, [tokens, sortBy]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedTokens.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTokens = sortedTokens.slice(startIndex, endIndex);
+
+  // Reset to page 1 when sort changes
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort);
+    setCurrentPage(1);
+  };
+
+  // Pagination handlers
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
+  const handlePageClick = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      // Show all pages if 7 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push("...");
+      }
+
+      // Show current page and surrounding pages
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push("...");
+      }
+
+      // Always show last page
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <div className="col-span-1 xl:col-span-3 bg-neutral-900 border p-2 sm:p-4 xl:p-2 border-neutral-800 rounded-xl min-h-[350px] sm:min-h-[400px] lg:min-h-[500px] xl:min-h-[600px] flex flex-col">

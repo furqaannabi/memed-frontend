@@ -2,7 +2,7 @@ import { TrophyIcon } from "lucide-react";
 import { LeaderboardCard } from "./LeaderboardCard";
 
 interface LeaderboardItem {
-  id: number;
+  id: string | number; // Allow both string and number to handle different token ID types
   rank: number;
   name: string;
   username: string;

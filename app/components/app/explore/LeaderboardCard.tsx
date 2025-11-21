@@ -1,6 +1,6 @@
 interface LeaderboardCardProps {
   item: {
-    id: number;
+    id: string | number; // Allow both string and number to handle different token ID types
     rank: number;
     name: string;
     username: string;

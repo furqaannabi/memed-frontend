@@ -1,12 +1,15 @@
 import { MemeTokenCard } from "../explore/MemeTokenCard";
 
 interface MemeToken {
-  id: number;
+  id: string; // Changed from number to string to match MemeTokenCard
   name: string;
   creator: string;
   price: number;
   marketCap: string;
   progress: number;
+  image: string; // Token image URL/key
+  fairLaunchId?: string; // Fair launch ID for fetching contract status
+  address?: string; // Token contract address
   active?: boolean;
   badge?: string;
   badgeColor?: string;

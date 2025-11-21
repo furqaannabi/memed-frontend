@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 // Mock data - in a real app, this would come from an API
 const allMemeTokens = [
   {
-    id: 1,
+    id: "1", // Changed to string to match component type
     name: "GLMP",
     creator: "Oxbruh",
     price: 21000,
@@ -15,7 +15,7 @@ const allMemeTokens = [
     progress: 75,
   },
   {
-    id: 2,
+    id: "2",
     name: "PEPE",
     creator: "Matt Furie",
     price: 5100000000,
@@ -24,7 +24,7 @@ const allMemeTokens = [
     progress: 50,
   },
   {
-    id: 3,
+    id: "3",
     name: "DOGE",
     creator: "Billy Markus",
     price: 20000000000,
@@ -33,7 +33,7 @@ const allMemeTokens = [
     progress: 90,
   },
   {
-    id: 4,
+    id: "4",
     name: "WIF",
     creator: "memelord",
     price: 2500000000,
@@ -42,7 +42,7 @@ const allMemeTokens = [
     progress: 30,
   },
   {
-    id: 5,
+    id: "5",
     name: "BONK",
     creator: "bonkdao",
     price: 1500000000,
@@ -51,7 +51,7 @@ const allMemeTokens = [
     progress: 60,
   },
   {
-    id: 6,
+    id: "6",
     name: "SHIB",
     creator: "Ryoshi",
     price: 12000000000,
