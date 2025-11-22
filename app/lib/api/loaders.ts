@@ -208,9 +208,16 @@ export function createParallelLoader<T extends Record<string, any>>(
 These loaders are used if you want to fetch only from one endpoint
  */
 // Specific loaders for Memed.fun routes
+// Updated to handle pagination and claimed/unclaimed filtering from backend
 export const memeTokensLoader = createApiLoader(API_ENDPOINTS.TOKENS, {
-  fallback: [],
-  transform: (data) => data.tokens || [],
+  fallback: { tokens: [], pagination: null },
+  transform: (data) => {
+    // Backend now returns { tokens: [...], pagination: {...} }
+    return {
+      tokens: data.tokens || [],
+      pagination: data.pagination || null
+    };
+  },
 });
 
 export const tokenBattlesLoader = createApiLoader("/battles", {

@@ -112,6 +112,18 @@ export default function LaunchPage() {
         { headers }, // 60s timeout, no retries
       );
 
+      console.log("=== TOKEN CREATION RESPONSE ===");
+      console.log("Full response:", result);
+      console.log("Token data:", result.data);
+      console.log("==============================");
+
+      // Validate that token was actually created and saved
+      if (!result.data || !result.data.fairLaunchId) {
+        console.error("⚠️ WARNING: Token created on blockchain but may not be saved to database!");
+        console.error("Response data:", result.data);
+        toast.warning("Token created on blockchain, but may not appear in explore. Contact support if issue persists.");
+      }
+
       setCreatedToken(result.data);
     } catch (e) {
       const error = e as Error;

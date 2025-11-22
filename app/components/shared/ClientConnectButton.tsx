@@ -37,19 +37,44 @@ export function ClientConnectButton() {
     data: authData,
     error: authError,
   } = useConnectWallet();
+  // Smart redirect: Only redirect if user is on an auth-required page
+  // Public pages (explore, token details, battles, home) - stay on page
+  // Auth-required pages (settings, rewards, creator dashboard) - redirect to home
+  const handleDisconnectRedirect = () => {
+    const currentPath = window.location.pathname;
+
+    // Pages that REQUIRE authentication - redirect to home
+    const authRequiredPages = [
+      '/settings',
+      '/rewards',
+      '/creator',
+      '/launch', // While launch is technically accessible, better UX to redirect after disconnect
+    ];
+
+    const requiresAuth = authRequiredPages.some(page => currentPath.includes(page));
+
+    if (requiresAuth) {
+      console.log("Disconnected from auth-required page, redirecting to home");
+      navigate("/");
+    } else {
+      console.log("Disconnected from public page, staying on current page");
+      // Stay on current page - user can continue browsing
+    }
+  };
+
   const { mutate: disconnectWallet, loading: isDisconnecting } =
     useDisconnectWallet({
       onSuccess: () => {
         console.log("Backend logout successful. Clearing client state.");
         useAuthStore.getState().clearAuth();
         disconnect();
-        navigate("/");
+        handleDisconnectRedirect();
       },
       onError: (error: Error) => {
         console.error("Backend logout failed:", error);
         useAuthStore.getState().clearAuth();
         disconnect();
-        navigate("/");
+        handleDisconnectRedirect();
       },
     });
 

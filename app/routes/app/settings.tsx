@@ -34,6 +34,8 @@ export default function Settings() {
     [user?.socials]
   );
 
+  // When disconnecting from Settings page, always redirect to home
+  // Settings requires authentication, so user can't stay here after disconnect
   const handleDisconnect = () => {
     disconnect();
     navigate("/");
