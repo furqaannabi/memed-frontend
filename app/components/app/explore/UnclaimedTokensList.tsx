@@ -1,60 +1,36 @@
 import { useMemo } from "react";
-import { useGetTokenData } from "@/hooks/contracts/useMemedFactory";
 import { Unlock } from "lucide-react";
 import type { Token } from "@/hooks/api/useAuth";
+import type { TokenContractData } from "@/hooks/contracts/useTokensBatchData";
 import { MemeTokenCard } from "./MemeTokenCard";
 import meme from "@/assets/images/meme.png";
 
 interface UnclaimedTokensListProps {
   tokens: Token[];
+  contractDataMap: Record<string, TokenContractData>;
 }
 
-// Component to check a single token's claim status
+// Component to render token with pre-fetched claim status
 function TokenClaimStatus({
   token,
+  contractData,
   children,
 }: {
   token: Token;
+  contractData?: TokenContractData;
   children: (isUnclaimed: boolean, isLoading: boolean) => React.ReactNode;
 }) {
-  // Get token data from contract using fairLaunchId
-  const { data: tokenData, isLoading, error } = useGetTokenData(
-    token.fairLaunchId ? BigInt(token.fairLaunchId) : BigInt(0)
-  );
-
-  // Check if token is unclaimed
-  // tokenData structure: [token, warriorNFT, creator, name, ticker, description, image, isClaimedByCreator]
-  // isClaimedByCreator is at index 7 (8th field)
-  const isUnclaimed = tokenData
-    ? !(tokenData as any)[7]
-    : isLoading
-      ? true // Show during loading
-      : false; // Hide if data loaded but not unclaimed
-
-  // Debug logging
-  if (tokenData) {
-    console.log(`Token ${token.id} (${token.metadata?.name}):`, {
-      fairLaunchId: token.fairLaunchId,
-      contractData: tokenData,
-      isClaimedByCreator: (tokenData as any)[7],
-      isUnclaimed,
-    });
-  }
+  // Use pre-fetched contract data instead of making individual calls
+  const isUnclaimed = contractData?.isUnclaimed ?? false;
+  const isLoading = contractData?.isLoading ?? false;
 
   return <>{children(isUnclaimed, isLoading)}</>;
 }
 
-export function UnclaimedTokensList({ tokens }: UnclaimedTokensListProps) {
+export function UnclaimedTokensList({ tokens, contractDataMap }: UnclaimedTokensListProps) {
   // Filter tokens that have fairLaunchId (needed to check claim status)
   const tokensWithFairLaunch = useMemo(() => {
-    const filtered = tokens.filter((token) => token.fairLaunchId);
-    console.log("UnclaimedTokensList - Total tokens:", tokens.length);
-    console.log("UnclaimedTokensList - Tokens with fairLaunchId:", filtered.length);
-    console.log(
-      "UnclaimedTokensList - Filtered tokens:",
-      filtered.map((t) => ({ id: t.id, name: t.metadata?.name, fairLaunchId: t.fairLaunchId }))
-    );
-    return filtered;
+    return tokens.filter((token) => token.fairLaunchId);
   }, [tokens]);
 
   return (
@@ -66,41 +42,53 @@ export function UnclaimedTokensList({ tokens }: UnclaimedTokensListProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {tokensWithFairLaunch.map((token) => (
-            <TokenClaimStatus key={token.id} token={token}>
-              {(isUnclaimed, isLoading) => {
-                // Only render if unclaimed
-                if (!isUnclaimed) return null;
+          {tokensWithFairLaunch.map((token) => {
+            // Get pre-fetched contract data for this token
+            const contractData = token.fairLaunchId
+              ? contractDataMap[token.fairLaunchId]
+              : undefined;
 
-                // Convert token to MemeTokenCard format
-                const memeToken = {
-                  id: token.id,
-                  name: token.metadata?.name || "Unnamed Token",
-                  creator: token.userId && typeof token.userId === 'string' && token.userId.length >= 4
-                    ? `user...${token.userId.slice(-4)}`
-                    : "Unknown",
-                  ticker: token.metadata?.ticker || "UNKN",
-                  description: token.metadata?.description || "No description",
-                  price: 0,
-                  marketCap: "N/A",
-                  progress: 0,
-                  active: false,
-                  badge: "Unclaimed",
-                  badgeColor: "bg-yellow-500",
-                  image: token.metadata?.imageKey || meme,
-                  fairLaunchId: token.fairLaunchId,
-                };
+            return (
+              <TokenClaimStatus
+                key={token.id}
+                token={token}
+                contractData={contractData}
+              >
+                {(isUnclaimed, isLoading) => {
+                  // Only render if unclaimed
+                  if (!isUnclaimed) return null;
 
-                return (
-                  <MemeTokenCard
-                    token={memeToken}
-                    linkTo={`/claim-token/${token.id}`}
-                    isUnclaimed={true}
-                  />
-                );
-              }}
-            </TokenClaimStatus>
-          ))}
+                  // Convert token to MemeTokenCard format
+                  const memeToken = {
+                    id: token.id,
+                    name: token.metadata?.name || "Unnamed Token",
+                    creator: token.userId && typeof token.userId === 'string' && token.userId.length >= 4
+                      ? `user...${token.userId.slice(-4)}`
+                      : "Unknown",
+                    ticker: token.metadata?.ticker || "UNKN",
+                    description: token.metadata?.description || "No description",
+                    price: 0,
+                    marketCap: "N/A",
+                    progress: 0,
+                    active: false,
+                    badge: "Unclaimed",
+                    badgeColor: "bg-yellow-500",
+                    image: token.metadata?.imageKey || meme,
+                    fairLaunchId: token.fairLaunchId,
+                  };
+
+                  return (
+                    <MemeTokenCard
+                      token={memeToken}
+                      linkTo={`/claim-token/${token.id}`}
+                      isUnclaimed={true}
+                      contractData={contractData}
+                    />
+                  );
+                }}
+              </TokenClaimStatus>
+            );
+          })}
         </div>
       )}
     </div>

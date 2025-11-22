@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Gift,
   Activity,
@@ -35,7 +35,7 @@ export default function EngagementRewards() {
     isLoading: isLoadingRewards,
     refetch: refetchRewards,
   } = useGetUserEngagementReward();
-  //console.log(rewardsData);
+
   // Set default selected token when data loads
   useEffect(() => {
     if (!selectedTokenAddress && !isLoadingUser && !isLoadingRewards) {
@@ -52,7 +52,6 @@ export default function EngagementRewards() {
         if (firstValidRewardToken) {
           const tokenAddr =
             firstValidRewardToken.token.toLowerCase() as `0x${string}`;
-          console.log("Setting default token from rewards:", tokenAddr);
           setSelectedTokenAddress(tokenAddr);
         }
       } else if (user?.token && user.token.length > 0) {
@@ -67,7 +66,6 @@ export default function EngagementRewards() {
         if (firstLaunchedToken?.address) {
           const tokenAddr =
             firstLaunchedToken.address.toLowerCase() as `0x${string}`;
-          console.log("Setting default token from launched:", tokenAddr);
           setSelectedTokenAddress(tokenAddr);
         }
       }
@@ -94,10 +92,14 @@ export default function EngagementRewards() {
         )}`
       : "Token");
 
-  // Filter rewards by selected token
-  const filteredRewards = rewardsData?.filter(
-    (reward) =>
-      reward.token.toLowerCase() === selectedTokenAddress?.toLowerCase()
+  // Filter rewards by selected token (memoized to prevent unnecessary recalculations)
+  const filteredRewards = useMemo(
+    () =>
+      rewardsData?.filter(
+        (reward) =>
+          reward.token.toLowerCase() === selectedTokenAddress?.toLowerCase()
+      ),
+    [rewardsData, selectedTokenAddress]
   );
 
   // Fetch recent claim activity
@@ -259,11 +261,6 @@ export default function EngagementRewards() {
                       onChange={(e) => {
                         const newAddr =
                           e.target.value.toLowerCase() as `0x${string}`;
-                        console.log("Token selection changed to:", newAddr);
-                        console.log(
-                          "Previous selection was:",
-                          selectedTokenAddress
-                        );
                         setSelectedTokenAddress(newAddr);
                       }}
                       className="bg-neutral-900 text-white px-4 py-2 rounded-lg border border-neutral-800 focus:outline-none focus:border-green-500 cursor-pointer"

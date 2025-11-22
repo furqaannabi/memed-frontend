@@ -43,6 +43,7 @@ import { Search } from "lucide-react";
 import { TokenCard, type TokenData } from "@/components/app/battles/TokenCard";
 import { EmptySlot } from "@/components/app/battles/EmptySlot";
 import { useDebounce } from "@/utils/debounce";
+import { useTokenDetailsMap } from "@/hooks/useTokenDetailsMap";
 
 // Battle status enum matching contract
 // 0 = NOT_STARTED (initial state, not used)
@@ -145,7 +146,8 @@ export default function Battles() {
   const [supportingSide, setSupportingSide] = useState<
     "memeA" | "memeB" | null
   >(null);
-  const [selectedNFTs, setSelectedNFTs] = useState<bigint[]>([]);
+  // Use Set for O(1) lookups instead of array O(n) lookups
+  const [selectedNFTs, setSelectedNFTs] = useState<Set<bigint>>(new Set());
 
   // Battle Details Modal state
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -192,16 +194,6 @@ export default function Battles() {
     supportedTokenAddress
   );
 
-  // Log query parameters (only when modal is open to reduce console spam)
-  if (showAllocateModal) {
-    console.log('Allocations Query Params:', {
-      battleId: allocationBattle?.battleId?.toString(),
-      address,
-      supportedTokenAddress,
-      isLoading: isLoadingAllocations,
-      error: allocationsError,
-    });
-  }
 
   // Get list of NFT IDs already allocated to this battle
   // userBattleAllocations is a tuple: [battleId, user, supportedMeme, nftsIds[], claimed, getBack]
@@ -212,19 +204,6 @@ export default function Battles() {
   const allocatedNFTIds = allocatedNFTsArray && Array.isArray(allocatedNFTsArray)
     ? allocatedNFTsArray
     : [];
-
-  // Debug logging - only when modal is open
-  if (showAllocateModal) {
-    console.log('Battle Allocation Debug:', {
-      battleId: allocationBattle?.battleId?.toString(),
-      userBattleAllocations,
-      allocatedNFTIds: allocatedNFTIds.map(id => id.toString()),
-      activeNFTs: activeNFTs?.map(id => id.toString()),
-      supportedTokenAddress,
-      hasAllocationBattle: !!allocationBattle,
-      hasSupportingSide: !!supportingSide,
-    });
-  }
 
   // Helper function to check if an NFT is already allocated to this battle
   const isNFTAllocated = (nftId: bigint): boolean => {
@@ -242,11 +221,6 @@ export default function Battles() {
   // Wait for allocationBattle and supportedTokenAddress to be set
   useEffect(() => {
     if (showAllocateModal && nftAddress && allocationBattle && supportedTokenAddress) {
-      console.log('Refetching with valid params:', {
-        battleId: allocationBattle.battleId.toString(),
-        supportedTokenAddress,
-        nftAddress: nftAddress.toString(),
-      });
       refetchActiveNFTs();
       // Small delay to ensure state is fully updated before refetching allocations
       setTimeout(() => {
@@ -344,7 +318,7 @@ export default function Battles() {
       // Refetch battle allocations to update the "already allocated" count
       refetchBattleAllocations();
       // Reset allocation state
-      setSelectedNFTs([]);
+      setSelectedNFTs(new Set());
       setShowAllocateModal(false);
       setAllocationBattle(null);
       setSupportingSide(null);
@@ -363,24 +337,40 @@ export default function Battles() {
 
   // Fetch all tokens when selecting opponent (Meme B)
   useEffect(() => {
+    // AbortController for cleanup on unmount or dependency change
+    const abortController = new AbortController();
+
     const fetchAllTokens = async () => {
       if (showTokenSelector && selectingFor === "memeB") {
         setIsLoadingAllTokens(true);
         try {
           const response = await apiClient.get<{ tokens: any[] }>(
-            API_ENDPOINTS.TOKENS
+            API_ENDPOINTS.TOKENS,
+            { signal: abortController.signal }
           );
-          setAllTokens(response.data.tokens || []);
-        } catch (error) {
-          console.error("Failed to fetch all tokens:", error);
-          setAllTokens([]);
+          // Only update state if request wasn't aborted
+          if (!abortController.signal.aborted) {
+            setAllTokens(response.data.tokens || []);
+          }
+        } catch (error: any) {
+          // Ignore abort errors
+          if (error.name !== 'AbortError' && !abortController.signal.aborted) {
+            setAllTokens([]);
+          }
         } finally {
-          setIsLoadingAllTokens(false);
+          if (!abortController.signal.aborted) {
+            setIsLoadingAllTokens(false);
+          }
         }
       }
     };
 
     fetchAllTokens();
+
+    // Cleanup function to abort ongoing request
+    return () => {
+      abortController.abort();
+    };
   }, [showTokenSelector, selectingFor]);
 
   // Handle opening token selector
@@ -428,17 +418,21 @@ export default function Battles() {
   const handleOpenAllocation = (battle: Battle, side: "memeA" | "memeB") => {
     setAllocationBattle(battle);
     setSupportingSide(side);
-    setSelectedNFTs([]);
+    setSelectedNFTs(new Set());
     setShowAllocateModal(true);
   };
 
-  // Handle NFT selection toggle
+  // Handle NFT selection toggle (using Set for O(1) operations)
   const toggleNFTSelection = (nftId: bigint) => {
-    setSelectedNFTs((prev) =>
-      prev.includes(nftId)
-        ? prev.filter((id) => id !== nftId)
-        : [...prev, nftId]
-    );
+    setSelectedNFTs((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nftId)) {
+        newSet.delete(nftId);
+      } else {
+        newSet.add(nftId);
+      }
+      return newSet;
+    });
   };
 
   // Handle NFT allocation
@@ -447,7 +441,7 @@ export default function Battles() {
       !allocationBattle ||
       !address ||
       !supportingSide ||
-      selectedNFTs.length === 0
+      selectedNFTs.size === 0
     ) {
       return;
     }
@@ -461,7 +455,7 @@ export default function Battles() {
       battleId: allocationBattle.battleId,
       user: address,
       supportedMeme,
-      nftsIds: selectedNFTs,
+      nftsIds: Array.from(selectedNFTs), // Convert Set to array for contract call
     });
   };
 
@@ -617,190 +611,23 @@ export default function Battles() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  // State to hold token details map
-  const [tokenDetailsMap, setTokenDetailsMap] = useState<
-    Record<
-      string,
-      { name: string; ticker: string; image: string; address: string }
-    >
-  >({});
+  // Extract unique token addresses from all battles for fetching metadata
+  const tokenAddresses = useMemo(() => {
+    if (!battles || battles.length === 0) return [];
 
-  // Effect to initialize token details when user data or battles load
-  useEffect(() => {
-    let cancelled = false; // To prevent state updates on unmounted components
+    const uniqueAddresses = new Set<string>();
+    battles.forEach((battle) => {
+      if (battle.memeA) uniqueAddresses.add(battle.memeA.toLowerCase());
+      if (battle.memeB) uniqueAddresses.add(battle.memeB.toLowerCase());
+    });
 
-    const buildTokenDetailsMap = async () => {
-      const newTokenDetailsMap: Record<
-        string,
-        { name: string; ticker: string; image: string; address: `0x${string}` }
-      > = {};
+    return Array.from(uniqueAddresses);
+  }, [battles]);
 
-      // Add user's tokens first
-      if (user?.token && !cancelled) {
-        user.token.forEach((token) => {
-          if (token.address && !cancelled) {
-            const addressKey = token.address.toLowerCase();
-            newTokenDetailsMap[addressKey] = {
-              name:
-                token.metadata?.name ||
-                `${token.address.slice(0, 6)}...${token.address.slice(-4)}`,
-              ticker: token.metadata?.ticker || "???",
-              image:
-                token.image?.s3Key || (token.metadata as any)?.imageKey || "",
-              address: token.address as `0x${string}`,
-            };
-          }
-        });
-      }
-
-      // Combine all unique token addresses from battles to fetch additional details
-      if (battles && battles.length > 0 && !cancelled) {
-        const uniqueAddresses = new Set<string>();
-        battles.forEach((battle) => {
-          if (battle.memeA) uniqueAddresses.add(battle.memeA.toLowerCase());
-          if (battle.memeB) uniqueAddresses.add(battle.memeB.toLowerCase());
-        });
-
-        // Fetch details for tokens not in user's token list
-        for (const address of uniqueAddresses) {
-          if (cancelled) break;
-          const addressKey = address.toLowerCase();
-          console.log(addressKey);
-          if (!newTokenDetailsMap[addressKey]) {
-            try {
-              // Try to fetch token details by address from the API
-              console.log(
-                `Fetching token by address: /api/token-by-address/${address}`
-              );
-              const response = await apiClient.get(
-                `/api/token-by-address/${address}`
-              );
-              const responseData = response.data as any;
-
-              if (
-                responseData &&
-                responseData.metadata &&
-                typeof responseData.metadata === "object" &&
-                !cancelled
-              ) {
-                const tokenMetadata = responseData.metadata as {
-                  name?: string;
-                  ticker?: string;
-                  imageKey?: string;
-                };
-                console.log(
-                  `Successfully fetched token ${address} by address:`,
-                  responseData
-                );
-                newTokenDetailsMap[addressKey] = {
-                  name:
-                    tokenMetadata.name ||
-                    `${address.slice(0, 6)}...${address.slice(-4)}`,
-                  ticker: tokenMetadata.ticker || "???",
-                  image: tokenMetadata.imageKey || "",
-                  address: responseData.address || (address as `0x${string}`),
-                };
-              } else if (!cancelled) {
-                console.log(`Token ${address} not found via direct API call`);
-              }
-            } catch (error) {
-              if (cancelled) return;
-              // Fallback to fetching all tokens and filtering
-              try {
-                const allTokensResponse = await apiClient.get("/api/tokens");
-                console.log(
-                  "Fetching all tokens from /api/tokens endpoint:",
-                  allTokensResponse
-                );
-                // Type assertion for the response data
-                const allTokensData = allTokensResponse.data as
-                  | { tokens?: any[] }
-                  | any[];
-                const allTokens = Array.isArray(allTokensData)
-                  ? allTokensData
-                  : allTokensData &&
-                    "tokens" in allTokensData &&
-                    Array.isArray(allTokensData.tokens)
-                  ? allTokensData.tokens
-                  : [];
-                console.log(
-                  "Fetched all tokens from /tokens endpoint:",
-                  allTokens
-                );
-                const tokenData = allTokens.find((t: any) => {
-                  // Type guard to check if the token object has an address property
-                  return (
-                    t &&
-                    typeof t === "object" &&
-                    "address" in t &&
-                    t.address &&
-                    typeof t.address === "string" &&
-                    t.address.toLowerCase() === addressKey
-                  );
-                });
-
-                if (
-                  tokenData &&
-                  tokenData.metadata &&
-                  typeof tokenData.metadata === "object" &&
-                  !cancelled
-                ) {
-                  const tokenMetadata = tokenData.metadata as {
-                    name?: string;
-                    ticker?: string;
-                    imageKey?: string;
-                  };
-                  console.log(
-                    `Found token ${address} in all tokens:`,
-                    tokenData
-                  );
-                  newTokenDetailsMap[addressKey] = {
-                    name:
-                      tokenMetadata.name ||
-                      `${address.slice(0, 6)}...${address.slice(-4)}`,
-                    ticker: tokenMetadata.ticker || "???",
-                    image: tokenMetadata.imageKey || "",
-                    address: tokenData.address || (address as `0x${string}`),
-                  };
-                } else if (!cancelled) {
-                  console.log(`Token ${address} not found in all tokens`);
-                  // If all methods fail, use address as fallback
-                  newTokenDetailsMap[addressKey] = {
-                    name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-                    ticker: "???",
-                    image: "",
-                    address: address as `0x${string}`,
-                  };
-                }
-              } catch (fallbackError) {
-                if (!cancelled) {
-                  // If everything fails, use address as fallback
-                  newTokenDetailsMap[addressKey] = {
-                    name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-                    ticker: "???",
-                    image: "",
-                    address: address as `0x${string}`,
-                  };
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (!cancelled) {
-        setTokenDetailsMap(newTokenDetailsMap);
-      }
-    };
-
-    buildTokenDetailsMap();
-
-    // Cleanup function to prevent state updates on unmounted component
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.token, battles]);
+  // Fetch token details using shared hook (includes ticker and address fields)
+  const { tokenDetailsMap } = useTokenDetailsMap(tokenAddresses, {
+    includeExtendedFields: true,
+  });
 
   // Synchronous helper function to get token details by address
   const getTokenDetails = useCallback(
@@ -1993,7 +1820,7 @@ export default function Battles() {
                     )}
                     <div className="mb-4">
                       <p className="text-sm text-neutral-400 mb-2">
-                        Select NFTs to allocate ({selectedNFTs.length} selected)
+                        Select NFTs to allocate ({selectedNFTs.size} selected)
                         • {availableNFTsCount} available for this battle / {totalNFTs} total
                       </p>
                       {alreadyAllocatedToThisBattle > 0 && (
@@ -2028,7 +1855,7 @@ export default function Battles() {
                             className={`p-4 rounded-lg border-2 transition-all ${
                               isAllocated
                                 ? "border-neutral-600 bg-neutral-800/50 opacity-50 cursor-not-allowed"
-                                : selectedNFTs.includes(nftId)
+                                : selectedNFTs.has(nftId)
                                 ? supportingSide === "memeA"
                                   ? "border-green-500 bg-green-500/10 cursor-pointer"
                                   : "border-orange-500 bg-orange-500/10 cursor-pointer"
@@ -2048,7 +1875,7 @@ export default function Battles() {
                                     Already Allocated
                                   </p>
                                 </div>
-                              ) : selectedNFTs.includes(nftId) ? (
+                              ) : selectedNFTs.has(nftId) ? (
                                 <div className="mt-2">
                                   <CheckCircle
                                     className={`w-5 h-5 mx-auto ${
@@ -2083,7 +1910,7 @@ export default function Battles() {
                     <button
                       onClick={handleAllocateNFTs}
                       disabled={
-                        selectedNFTs.length === 0 ||
+                        selectedNFTs.size === 0 ||
                         isAllocatePending ||
                         isAllocateConfirming
                       }
@@ -2103,8 +1930,8 @@ export default function Battles() {
                       ) : (
                         <>
                           <Users className="w-5 h-5" />
-                          Allocate {selectedNFTs.length} NFT
-                          {selectedNFTs.length !== 1 ? "s" : ""}
+                          Allocate {selectedNFTs.size} NFT
+                          {selectedNFTs.size !== 1 ? "s" : ""}
                         </>
                       )}
                     </button>

@@ -9,6 +9,7 @@ import { HorizontalCard } from "@/components/app/explore/HorizontalCard";
 import { memeTokensLoader, type LoaderData } from "@/lib/api/loaders";
 import type { Token } from "@/hooks/api/useAuth";
 import { Unlock, Grid3x3 } from "lucide-react";
+import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
 
 // Export the loader for this route, following the project convention
 export { memeTokensLoader as loader };
@@ -19,6 +20,12 @@ export default function Explore() {
 
   // Tab state for switching between all tokens and unclaimed tokens
   const [activeTab, setActiveTab] = useState<"all" | "unclaimed">("all");
+
+  // Batch-fetch contract data for all tokens ONCE at page level
+  // This eliminates 27+ redundant contract calls (3 per token × 9 tokens)
+  const { dataMap: contractDataMap } = useTokensBatchData(
+    (loadedTokens || []).map(token => token.fairLaunchId)
+  );
 
   // Adapt the loaded data to the format expected by the MemeTokenCard component
   const memeTokens = (loadedTokens || []).map((token) => ({
@@ -170,7 +177,10 @@ export default function Explore() {
               <div className="flex-1 min-w-0 ">
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 sm:gap-4 xl:gap-2">
                   {/* Claimed Tokens List - shows tokens that have been claimed */}
-                  <MemeTokensList tokens={memeTokens} />
+                  <MemeTokensList
+                    tokens={memeTokens}
+                    contractDataMap={contractDataMap}
+                  />
 
                   {/* Leaderboard - always second, beside on xl screens */}
                   <Leaderboard items={leaderboard} />
@@ -182,7 +192,10 @@ export default function Explore() {
           <>
             {/* Unclaimed Tokens Section - Shows tokens waiting to be claimed */}
             {loadedTokens && loadedTokens.length > 0 && (
-              <UnclaimedTokensList tokens={loadedTokens} />
+              <UnclaimedTokensList
+                tokens={loadedTokens}
+                contractDataMap={contractDataMap}
+              />
             )}
           </>
         )}
