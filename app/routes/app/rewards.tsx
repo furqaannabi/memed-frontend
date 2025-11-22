@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Gift,
   Activity,
@@ -19,10 +19,11 @@ import { useRecentClaims } from "@/hooks/contracts/useRecentClaims";
 import { useGetUserClaimableRewards } from "@/hooks/contracts/useMemedBattle";
 import { useUserActiveNfts } from "@/hooks/contracts/useMemedWarriorNFT";
 import { useGetWarriorNFT } from "@/hooks/contracts/useMemedFactory";
+import { ConnectWalletPrompt } from "@/components/shared/ConnectWalletPrompt";
 
 export default function EngagementRewards() {
   const { address } = useAccount();
-  const { user, isLoading: isLoadingUser } = useAuthStore();
+  const { user, isLoading: isLoadingUser, isAuthenticated } = useAuthStore();
 
   // Token selection state
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<
@@ -35,7 +36,7 @@ export default function EngagementRewards() {
     isLoading: isLoadingRewards,
     refetch: refetchRewards,
   } = useGetUserEngagementReward();
-  //console.log(rewardsData);
+
   // Set default selected token when data loads
   useEffect(() => {
     if (!selectedTokenAddress && !isLoadingUser && !isLoadingRewards) {
@@ -52,7 +53,6 @@ export default function EngagementRewards() {
         if (firstValidRewardToken) {
           const tokenAddr =
             firstValidRewardToken.token.toLowerCase() as `0x${string}`;
-          console.log("Setting default token from rewards:", tokenAddr);
           setSelectedTokenAddress(tokenAddr);
         }
       } else if (user?.token && user.token.length > 0) {
@@ -67,7 +67,6 @@ export default function EngagementRewards() {
         if (firstLaunchedToken?.address) {
           const tokenAddr =
             firstLaunchedToken.address.toLowerCase() as `0x${string}`;
-          console.log("Setting default token from launched:", tokenAddr);
           setSelectedTokenAddress(tokenAddr);
         }
       }
@@ -94,10 +93,14 @@ export default function EngagementRewards() {
         )}`
       : "Token");
 
-  // Filter rewards by selected token
-  const filteredRewards = rewardsData?.filter(
-    (reward) =>
-      reward.token.toLowerCase() === selectedTokenAddress?.toLowerCase()
+  // Filter rewards by selected token (memoized to prevent unnecessary recalculations)
+  const filteredRewards = useMemo(
+    () =>
+      rewardsData?.filter(
+        (reward) =>
+          reward.token.toLowerCase() === selectedTokenAddress?.toLowerCase()
+      ),
+    [rewardsData, selectedTokenAddress]
   );
 
   // Fetch recent claim activity
@@ -259,11 +262,6 @@ export default function EngagementRewards() {
                       onChange={(e) => {
                         const newAddr =
                           e.target.value.toLowerCase() as `0x${string}`;
-                        console.log("Token selection changed to:", newAddr);
-                        console.log(
-                          "Previous selection was:",
-                          selectedTokenAddress
-                        );
                         setSelectedTokenAddress(newAddr);
                       }}
                       className="bg-neutral-900 text-white px-4 py-2 rounded-lg border border-neutral-800 focus:outline-none focus:border-green-500 cursor-pointer"
@@ -403,26 +401,30 @@ export default function EngagementRewards() {
                                 {reward.token.slice(-4)}
                               </td>
 
-                              {/* Action Column */}
+                              {/* Action Column - gated behind authentication */}
                               <td className="py-4 px-4 text-right">
-                                <button
-                                  onClick={() => handleClaim(reward.rewardId)}
-                                  disabled={isProcessingThis}
-                                  className="bg-green-600 hover:bg-green-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black cursor-pointer font-semibold py-2 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2 min-w-[100px]"
-                                >
-                                  {isProcessingThis ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      <span className="hidden sm:inline">
-                                        {isClaimPending
-                                          ? "Signing..."
-                                          : "Claiming..."}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    "Claim"
-                                  )}
-                                </button>
+                                {!isAuthenticated || !address ? (
+                                  <ConnectWalletPrompt variant="button" />
+                                ) : (
+                                  <button
+                                    onClick={() => handleClaim(reward.rewardId)}
+                                    disabled={isProcessingThis}
+                                    className="bg-green-600 hover:bg-green-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black cursor-pointer font-semibold py-2 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2 min-w-[100px]"
+                                  >
+                                    {isProcessingThis ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="hidden sm:inline">
+                                          {isClaimPending
+                                            ? "Signing..."
+                                            : "Claiming..."}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      "Claim"
+                                    )}
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );

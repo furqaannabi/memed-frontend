@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { MemeTokenCard } from "./MemeTokenCard";
-import { useGetTokenData } from "@/hooks/contracts/useMemedFactory";
+import type { TokenContractData } from "@/hooks/contracts/useTokensBatchData";
 
 interface MemeToken {
   id: string;
@@ -20,44 +20,37 @@ interface MemeToken {
 
 interface MemeTokensListProps {
   tokens: MemeToken[];
+  contractDataMap: Record<string, TokenContractData>;
 }
 
 type SortOption = "new" | "popular" | "marketCap";
 
-// Component to check a token's claim status and render with appropriate props
-function TokenWithClaimStatus({ token }: { token: MemeToken }) {
-  // Get token data from contract using fairLaunchId
-  const {
-    data: tokenData,
-    isLoading,
-    error,
-  } = useGetTokenData(
-    token.fairLaunchId ? BigInt(token.fairLaunchId) : BigInt(0)
+// Component to render a token card with pre-fetched contract data
+function TokenWithClaimStatus({
+  token,
+  contractDataMap,
+}: {
+  token: MemeToken;
+  contractDataMap: Record<string, TokenContractData>;
+}) {
+  // Get pre-fetched contract data instead of making individual contract calls
+  const contractData = token.fairLaunchId
+    ? contractDataMap[token.fairLaunchId]
+    : undefined;
+
+  // Use pre-calculated isUnclaimed field from batch data
+  const isUnclaimed = contractData?.isUnclaimed ?? false;
+
+  return (
+    <MemeTokenCard
+      token={token}
+      isUnclaimed={isUnclaimed}
+      contractData={contractData}
+    />
   );
-
-  // Check if token is unclaimed
-  // tokenData structure: [token, warriorNFT, creator, name, ticker, description, image, isClaimedByCreator]
-  // isClaimedByCreator is at index 7
-  // If contract call fails (error), don't show unclaimed badge (data might be incomplete)
-  const isUnclaimed =
-    !error && tokenData && token.fairLaunchId ? !(tokenData as any)[3] : false;
-
-  // Debug logging
-  // if (token.fairLaunchId) {
-  //   console.log(`[All Tokens] Token ${token.name}:`, {
-  //     fairLaunchId: token.fairLaunchId,
-  //     hasData: !!tokenData,
-  //     isLoading,
-  //     error: error?.message || null,
-  //     isClaimedByCreator: tokenData ? (tokenData as any)[7] : "no data",
-  //     isUnclaimed,
-  //   });
-  // }
-
-  return <MemeTokenCard token={token} isUnclaimed={isUnclaimed} />;
 }
 
-export function MemeTokensList({ tokens }: MemeTokensListProps) {
+export function MemeTokensList({ tokens, contractDataMap }: MemeTokensListProps) {
   const [sortBy, setSortBy] = useState<SortOption>("new");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9; // Show 9 tokens per page (3x3 grid on xl screens)
@@ -170,7 +163,11 @@ export function MemeTokensList({ tokens }: MemeTokensListProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
         {paginatedTokens.map((token) => (
-          <TokenWithClaimStatus key={token.id} token={token} />
+          <TokenWithClaimStatus
+            key={token.id}
+            token={token}
+            contractDataMap={contractDataMap}
+          />
         ))}
       </div>
 

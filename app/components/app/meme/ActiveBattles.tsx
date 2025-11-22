@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { SwordsIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { BattleCard } from "@/components/shared/BattleCard";
 import { useGetBattles } from "@/hooks/contracts/useMemedBattle";
-import { useAuthStore } from "@/store/auth";
-import { apiClient } from "@/lib/api/client";
+import { useTokenDetailsMap } from "@/hooks/useTokenDetailsMap";
 
 // Battle status enum
 type BattleStatus = 0 | 1 | 2 | 3;
@@ -33,14 +32,6 @@ const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const battlesPerPage = 2;
 
-  // State to hold token details
-  const [tokenDetailsMap, setTokenDetailsMap] = useState<
-    Record<string, { name: string; image: string }>
-  >({});
-
-  // Get user's tokens from auth store
-  const { user } = useAuthStore();
-
   // Fetch all battles from contract
   const { data: battlesData, isLoading } = useGetBattles();
   const battles: Battle[] = (battlesData as Battle[]) || [];
@@ -55,59 +46,18 @@ const ActiveBattles = ({ tokenAddress }: ActiveBattlesProps) => {
     );
   }, [battles, tokenAddress]);
 
-  // Fetch token details for all tokens in active battles
-  useEffect(() => {
-    const fetchTokenDetails = async () => {
-      const newTokenDetailsMap: Record<string, { name: string; image: string }> = {};
+  // Extract unique token addresses from active battles
+  const tokenAddresses = useMemo(() => {
+    const uniqueAddresses = new Set<string>();
+    activeBattles.forEach((battle) => {
+      uniqueAddresses.add(battle.memeA.toLowerCase());
+      uniqueAddresses.add(battle.memeB.toLowerCase());
+    });
+    return Array.from(uniqueAddresses);
+  }, [activeBattles]);
 
-      // Add user's tokens first
-      if (user?.token) {
-        user.token.forEach((token) => {
-          if (token.address) {
-            newTokenDetailsMap[token.address.toLowerCase()] = {
-              name: token.metadata?.name || `${token.address.slice(0, 6)}...`,
-              image: token.image?.s3Key || (token.metadata as any)?.imageKey || "",
-            };
-          }
-        });
-      }
-
-      // Get unique token addresses from active battles
-      const uniqueAddresses = new Set<string>();
-      activeBattles.forEach((battle) => {
-        uniqueAddresses.add(battle.memeA.toLowerCase());
-        uniqueAddresses.add(battle.memeB.toLowerCase());
-      });
-
-      // Fetch details for tokens not in user's list
-      for (const address of uniqueAddresses) {
-        if (!newTokenDetailsMap[address]) {
-          try {
-            const response = await apiClient.get(`/api/token-by-address/${address}`);
-            const tokenData = response.data as any;
-            if (tokenData && tokenData.metadata) {
-              newTokenDetailsMap[address] = {
-                name: tokenData.metadata.name || `${address.slice(0, 6)}...`,
-                image: tokenData.metadata.imageKey || tokenData.image?.s3Key || "",
-              };
-            }
-          } catch (error) {
-            // Fallback
-            newTokenDetailsMap[address] = {
-              name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-              image: "",
-            };
-          }
-        }
-      }
-
-      setTokenDetailsMap(newTokenDetailsMap);
-    };
-
-    if (activeBattles.length > 0) {
-      fetchTokenDetails();
-    }
-  }, [activeBattles, user]);
+  // Fetch token details using shared hook (simple fields: name and image only)
+  const { tokenDetailsMap } = useTokenDetailsMap(tokenAddresses);
 
   // Calculate pagination
   const totalPages = Math.ceil(activeBattles.length / battlesPerPage);

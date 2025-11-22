@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Flame, Timer, Rocket, XCircle, Unlock } from "lucide-react";
 import { Link } from "react-router";
-import {
-  useFairLaunchData,
-  useIsRefundable,
-} from "@/hooks/contracts/useMemedTokenSale";
+import type { TokenContractData } from "@/hooks/contracts/useTokensBatchData";
 
 interface MemeTokenCardProps {
   token: {
@@ -22,22 +19,21 @@ interface MemeTokenCardProps {
   };
   linkTo?: string; // Optional custom link destination
   isUnclaimed?: boolean; // Whether this token is unclaimed
+  contractData?: TokenContractData; // Pre-fetched contract data (eliminates redundant calls)
 }
 
-export function MemeTokenCard({ token, linkTo, isUnclaimed = false }: MemeTokenCardProps) {
+export function MemeTokenCard({
+  token,
+  linkTo,
+  isUnclaimed = false,
+  contractData,
+}: MemeTokenCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Convert fairLaunchId to BigInt for contract calls
-  const contractTokenId = token.fairLaunchId ? BigInt(token.fairLaunchId) : 0n;
-
-  // Get fair launch status from contract
-  const { data: fairLaunchData } = useFairLaunchData(contractTokenId);
-  const { data: isRefundable } = useIsRefundable(contractTokenId);
-
-  // Determine current phase based on contract data
-  // FairLaunchStatus enum: 0 = NOT_STARTED, 1 = ACTIVE, 2 = COMPLETED, 3 = FAILED
-  const status = fairLaunchData ? fairLaunchData[0] : 0;
-  const isFailed = isRefundable === true || status === 3;
+  // Use pre-fetched contract data instead of making individual calls
+  // This eliminates 2 contract calls per token card (27 calls → 2 calls per page!)
+  const status = contractData?.status ?? 0;
+  const isFailed = contractData?.isFailed ?? false;
 
   // Use custom link if provided, otherwise default to token detail page
   const destination = linkTo || `/explore/meme/${token.id}`;
@@ -46,7 +42,7 @@ export function MemeTokenCard({ token, linkTo, isUnclaimed = false }: MemeTokenC
     <Link
       to={destination}
       className={`bg-neutral-900 rounded-xl p-2 sm:p-3 hover:bg-neutral-800 transition-colors cursor-pointer border ${
-        isUnclaimed ? 'border-yellow-500/50' : 'border-neutral-800'
+        isUnclaimed ? "border-yellow-500/50" : "border-neutral-800"
       }`}
     >
       <div className="flex items-center gap-2 sm:gap-3">
@@ -101,9 +97,7 @@ export function MemeTokenCard({ token, linkTo, isUnclaimed = false }: MemeTokenC
                 <Timer size={12} /> Funding
               </span>
             ) : (
-              <span className="text-gray-500 bg-gray-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0">
-                N/A
-              </span>
+              <span className="text-gray-500 bg-gray-800/50 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium ml-2 flex-shrink-0"></span>
             )}
           </div>
 

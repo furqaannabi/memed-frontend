@@ -42,8 +42,31 @@ interface Battle {
   totalReward: bigint;
 }
 
+// Token interface with metadata for stats display
+interface TokenWithMetadata {
+  id: string;
+  address?: `0x${string}`;
+  metadata?: {
+    name?: string;
+    ticker?: string;
+    imageKey?: string;
+  };
+  image?: {
+    s3Key?: string;
+  };
+}
+
+// Engagement reward tuple type from contract
+// Structure: [rewardId, tokenAddress, amount, claimed]
+type EngagementReward = [
+  rewardId: bigint,
+  tokenAddress: `0x${string}`,
+  amount: bigint,
+  claimed: boolean
+];
+
 // Component to display a single token card with real-time stats
-function TokenStatsCard({ token }: { token: any }) {
+function TokenStatsCard({ token }: { token: TokenWithMetadata }) {
   // Fetch real-time heat score for this token
   const { data: heatData, isLoading: isLoadingHeat } = useTokenHeat(
     token.address as `0x${string}`
@@ -222,12 +245,12 @@ export default function MyInsights() {
 
     // Filter unclaimed rewards
     const unclaimedRewards = engagementRewardData.filter(
-      (reward: any) => !reward[3]
+      (reward: EngagementReward) => !reward[3]
     ); // reward[3] is 'claimed' boolean
 
     // Sum unclaimed amounts - ensure we're working with BigInt
     let totalAmount = 0n;
-    unclaimedRewards.forEach((reward: any) => {
+    unclaimedRewards.forEach((reward: EngagementReward) => {
       const amount = BigInt(reward[2] || 0); // Ensure it's BigInt
       totalAmount = totalAmount + amount;
     });

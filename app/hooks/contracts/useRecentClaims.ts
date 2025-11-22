@@ -53,10 +53,6 @@ export function useRecentClaims(
         const calculatedFromBlock =
           latestBlock > maxBlocksBack ? latestBlock - maxBlocksBack : 0n;
 
-        console.log(
-          `Fetching reward claims from block ${calculatedFromBlock} to ${latestBlock}`
-        );
-
         // Query EngagementRewardClaimed events from blockchain
         // Event: EngagementRewardClaimed(address indexed user, uint256 indexed rewardId, uint256 amount)
         const events = await publicClient.getLogs({
@@ -70,8 +66,6 @@ export function useRecentClaims(
           fromBlock: calculatedFromBlock,
           toBlock: latestBlock,
         });
-
-        console.log(`Found ${events.length} reward claim events for user`);
 
         // Get timestamp for each event by fetching block data
         const historyWithTimestamps = await Promise.all(
