@@ -4,7 +4,6 @@ import { Loader2 } from 'lucide-react';
 import defaultMeme from "@/assets/images/meme.png";
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-import { useAuthStore } from '@/store/auth';
 
 // Helper to format market cap - memoized outside component for performance
 const formatMarketCap = (value: number): string => {
@@ -36,12 +35,16 @@ interface ApiToken {
 }
 
 export function TrendingMemes() {
-  const { isAuthenticated } = useAuthStore();
-
-  // Only fetch tokens if authenticated (backend requires auth for /tokens endpoint)
-  const { data: tokensData, isLoading, error } = useMemeTokens({
-    immediate: isAuthenticated, // Only fetch when authenticated
+  // Fetch only claimed tokens for trending display
+  // Backend now supports filtering by claimed status
+  const { data: tokensResponse, isLoading, error } = useMemeTokens({
+    immediate: true,  // Always fetch (endpoint is public)
+    claimed: true,    // Only fetch claimed tokens for trending
+    limit: 10,        // Fetch top 10 to sort by heat client-side
   });
+
+  // Extract tokens array from new backend response format: { tokens: [...], pagination: {...} }
+  const tokensData = tokensResponse?.tokens || [];
 
   // Get top 4 trending tokens sorted by heat score (or market cap if no heat)
   // Optimized: single pass with slice(0, 4) before mapping for better performance
@@ -98,9 +101,7 @@ export function TrendingMemes() {
         {(!topMemes || topMemes.length === 0) && !error && !isLoading && (
           <div className="text-center py-12">
             <p className="text-gray-300 text-lg mb-4">
-              {isAuthenticated
-                ? "No trending memes yet. Be the first to create one!"
-                : "Discover meme tokens, battles, and rewards"}
+              No trending memes yet. Be the first to create one!
             </p>
             <Link
               to="/explore"
@@ -111,8 +112,8 @@ export function TrendingMemes() {
           </div>
         )}
 
-        {/* Show error only if authenticated (auth errors expected for unauthenticated users) */}
-        {error && isAuthenticated && (
+        {/* Show error if API fails */}
+        {error && (
           <div className="text-center py-12">
             <p className="text-red-400 text-lg">
               Unable to load trending memes. Please try again later.

@@ -58,6 +58,22 @@ export interface MemeToken {
   description: string;
 }
 
+// Pagination metadata returned by backend
+export interface PaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+// Backend now returns tokens wrapped with pagination
+export interface TokensResponse {
+  tokens: MemeToken[];
+  pagination: PaginationMeta;
+}
+
 export interface TokenBattle {
   id: string;
   token1: MemeToken;
@@ -106,12 +122,33 @@ export interface LensEngagement {
 }
 
 // Meme Token Hooks
-export function useMemeTokens(options?: UseApiOptions) {
-  return useApi<MemeToken[]>(API_ENDPOINTS.TOKENS, {
-    cacheKey: "meme-tokens",
+// Updated to support new backend pagination and filtering
+export function useMemeTokens(options?: UseApiOptions & {
+  page?: number;
+  limit?: number;
+  claimed?: boolean;
+}) {
+  const { page, limit, claimed, ...apiOptions } = options || {};
+
+  // Build query params for pagination and filtering
+  const queryParams = new URLSearchParams();
+  if (page !== undefined) queryParams.append('page', String(page));
+  if (limit !== undefined) queryParams.append('limit', String(limit));
+  if (claimed !== undefined) queryParams.append('claimed', String(claimed));
+
+  // Construct endpoint with query params
+  const endpoint = queryParams.toString()
+    ? `${API_ENDPOINTS.TOKENS}?${queryParams}`
+    : API_ENDPOINTS.TOKENS;
+
+  // Use unique cache key per query combination
+  const cacheKeySuffix = queryParams.toString() || 'default';
+
+  return useApi<TokensResponse>(endpoint, {
+    cacheKey: `meme-tokens-${cacheKeySuffix}`,
     cacheDuration: 2 * 60 * 1000, // 2 minutes
     immediate: true,
-    ...options,
+    ...apiOptions,
   });
 }
 

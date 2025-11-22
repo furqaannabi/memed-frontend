@@ -345,10 +345,25 @@ export default function Battles() {
       if (showTokenSelector && selectingFor === "memeB") {
         setIsLoadingAllTokens(true);
         try {
-          const response = await apiClient.get<{ tokens: any[] }>(
-            API_ENDPOINTS.TOKENS,
+          // Build query params for backend filtering
+          const queryParams = new URLSearchParams();
+          queryParams.append('claimed', 'true'); // Only show claimed tokens
+          queryParams.append('failed', 'false'); // Only get successful launches (exclude failed/incomplete tokens)
+          queryParams.append('limit', '100'); // Reasonable limit
+
+          // Add search param if user is searching
+          if (debouncedSearchQuery) {
+            queryParams.append('search', debouncedSearchQuery);
+          }
+
+          // Backend now returns { tokens: [...], pagination: {...} } format
+          const endpoint = `${API_ENDPOINTS.TOKENS}?${queryParams.toString()}`;
+          const response = await apiClient.get<{ tokens: any[]; pagination?: any }>(
+            endpoint,
             { signal: abortController.signal }
           );
+
+          // Extract tokens array from response (already filtered by backend)
           // Only update state if request wasn't aborted
           if (!abortController.signal.aborted) {
             setAllTokens(response.data.tokens || []);
@@ -372,7 +387,7 @@ export default function Battles() {
     return () => {
       abortController.abort();
     };
-  }, [showTokenSelector, selectingFor]);
+  }, [showTokenSelector, selectingFor, debouncedSearchQuery]); // Refetch when search query changes
 
   // Handle opening token selector
   const handleOpenTokenSelector = (forSlot: "memeA" | "memeB") => {
@@ -1518,13 +1533,15 @@ export default function Battles() {
                 ) : (
                   (() => {
                     // Get the appropriate token list based on selection
+                    // For Meme A: user's tokens only
+                    // For Meme B: all tokens (already filtered by backend based on search query)
                     const tokenList =
                       selectingFor === "memeA" ? availableTokens : allTokens;
 
-                    // Filter tokens based on debounced search query (only for Meme B)
-                    // Using debounced query improves performance by reducing filtering frequency
+                    // Client-side filtering only for Meme A (user's own tokens)
+                    // Meme B tokens are already filtered by backend search endpoint
                     const filteredTokens =
-                      selectingFor === "memeB" && debouncedSearchQuery
+                      selectingFor === "memeA" && debouncedSearchQuery
                         ? tokenList.filter((token) => {
                             const query = debouncedSearchQuery.toLowerCase();
                             return (

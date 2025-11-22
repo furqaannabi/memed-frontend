@@ -26,8 +26,17 @@ export default function Explore() {
   // Revalidator hook to refetch data from loader
   const revalidator = useRevalidator();
 
-  // Tab state for switching between all tokens and unclaimed tokens
+  // Tab state for switching between claimed and unclaimed tokens
   const [activeTab, setActiveTab] = useState<"all" | "unclaimed">("all");
+
+  // Sync active tab with URL search params for proper backend filtering
+  useEffect(() => {
+    const currentPage = searchParams.get('page') || '1';
+    const claimed = activeTab === "all" ? "true" : "false";
+
+    setSearchParams({ page: currentPage, claimed });
+    revalidator.revalidate();
+  }, [activeTab]); // Refetch when tab changes
 
   // Debug logging - see what data we're getting from the API
   useEffect(() => {
@@ -45,18 +54,9 @@ export default function Explore() {
     (loadedTokens || []).map((token) => token.fairLaunchId)
   );
 
-  // Filter tokens based on claimed status from BACKEND (not blockchain)
-  // Backend now provides `claimed` boolean field
-  const claimedTokens = useMemo(() => {
-    return (loadedTokens || []).filter((token) => token.claimed === true);
-  }, [loadedTokens]);
-
-  const unclaimedTokens = useMemo(() => {
-    return (loadedTokens || []).filter((token) => token.claimed === false);
-  }, [loadedTokens]);
-
-  // Use the appropriate list based on active tab
-  const tokensToDisplay = activeTab === "all" ? claimedTokens : unclaimedTokens;
+  // Tokens are already filtered by backend based on 'claimed' query param
+  // No need for client-side filtering anymore!
+  const tokensToDisplay = loadedTokens || [];
 
   // Adapt the loaded data to the format expected by the MemeTokenCard component
   const memeTokens = tokensToDisplay.map((token) => ({
@@ -82,13 +82,14 @@ export default function Explore() {
     createdAt: token.createdAt,
   }));
 
-  // Create leaderboard from claimed tokens sorted by heat score
+  // Create leaderboard from loaded tokens sorted by heat score
+  // Only show leaderboard on "claimed" tab
   const leaderboard = useMemo(() => {
-    if (!claimedTokens || claimedTokens.length === 0) {
+    if (!loadedTokens || loadedTokens.length === 0 || activeTab !== "all") {
       return [];
     }
 
-    return [...claimedTokens]
+    return [...loadedTokens]
       .filter((token) => token.heat !== undefined && token.heat !== null)
       .sort((a, b) => {
         const heatA = typeof a.heat === "bigint" ? Number(a.heat) : a.heat || 0;
@@ -115,7 +116,7 @@ export default function Explore() {
               : String(Number(token.heat))
             : "0",
       }));
-  }, [claimedTokens]);
+  }, [loadedTokens, activeTab]);
 
   // Calculate platform statistics
   const platformStats = useMemo(() => {
@@ -176,7 +177,7 @@ export default function Explore() {
               }`}
             >
               <Grid3x3 className="w-4 h-4" />
-              Claimed ({claimedTokens.length})
+              Claimed {pagination?.totalCount ? `(${pagination.totalCount})` : ''}
             </button>
             <button
               onClick={() => setActiveTab("unclaimed")}
@@ -187,7 +188,7 @@ export default function Explore() {
               }`}
             >
               <Unlock className="w-4 h-4" />
-              Unclaimed ({unclaimedTokens.length})
+              Unclaimed {pagination?.totalCount ? `(${pagination.totalCount})` : ''}
             </button>
           </div>
 
