@@ -41,23 +41,23 @@ export default function Meme() {
   const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3 | 4>(1);
 
   // Check if token is unclaimed using contract data
-  const { data: tokenClaimData, isLoading: isClaimDataLoading } = useGetTokenData(
-    token?.fairLaunchId ? BigInt(token.fairLaunchId) : BigInt(0)
-  );
+  const { data: tokenClaimData, isLoading: isClaimDataLoading } =
+    useGetTokenData(
+      token?.fairLaunchId ? BigInt(token.fairLaunchId) : BigInt(0)
+    );
 
   // tokenData structure: [token, warriorNFT, creator, name, ticker, description, image, isClaimedByCreator]
   // isClaimedByCreator is at index 7
-  const isTokenUnclaimed = tokenClaimData && token?.fairLaunchId
-    ? !(tokenClaimData as any)[7]
-    : false;
+  const isTokenUnclaimed =
+    tokenClaimData && token?.fairLaunchId ? !(tokenClaimData as any)[3] : false;
 
   // Debug logging for claim status
-  console.log('[Meme Detail] Claim Status Check:', {
+  console.log("[Meme Detail] Claim Status Check:", tokenClaimData, {
     tokenId: token?.id,
     fairLaunchId: token?.fairLaunchId,
     hasClaimData: !!tokenClaimData,
     isClaimDataLoading,
-    isClaimedByCreator: tokenClaimData ? (tokenClaimData as any)[7] : 'no data',
+    isClaimedByCreator: tokenClaimData ? (tokenClaimData as any)[3] : "no data",
     isTokenUnclaimed,
   });
 
@@ -101,12 +101,21 @@ export default function Meme() {
 
       console.log("=== FAIR LAUNCH DEBUG ===");
       console.log("Contract Token ID:", contractTokenId.toString());
-      console.log("Status (0=NOT_STARTED, 1=ACTIVE, 2=COMPLETED, 3=FAILED):", status);
-      console.log("Fair Launch Start Time:", new Date(Number(fairLaunchStartTime) * 1000).toLocaleString());
+      console.log(
+        "Status (0=NOT_STARTED, 1=ACTIVE, 2=COMPLETED, 3=FAILED):",
+        status
+      );
+      console.log(
+        "Fair Launch Start Time:",
+        new Date(Number(fairLaunchStartTime) * 1000).toLocaleString()
+      );
       console.log("Total Committed (wei):", totalCommitted.toString());
       console.log("Total Sold (wei):", totalSold.toString());
       console.log("Uniswap Pair Address:", uniswapPair);
-      console.log("Created At:", new Date(Number(createdAt) * 1000).toLocaleString());
+      console.log(
+        "Created At:",
+        new Date(Number(createdAt) * 1000).toLocaleString()
+      );
       console.log("Is Refundable:", isRefundable);
       console.log("Current Phase:", currentPhase);
       console.log("========================");
@@ -125,7 +134,9 @@ export default function Meme() {
         setActive(false);
       } else if (status === 2) {
         console.log("→ Setting phase to 3 (COMPLETED - Tokens Claimable!)");
-        console.log("   Status 2 = COMPLETED means fair launch succeeded and tokens are claimable.");
+        console.log(
+          "   Status 2 = COMPLETED means fair launch succeeded and tokens are claimable."
+        );
         setCurrentPhase(3); // COMPLETED - show ClaimPanel (tokens claimable)
         setActive(true);
       } else if (status === 0) {
@@ -217,9 +228,13 @@ export default function Meme() {
             <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 p-6 border-b border-yellow-500/30">
               <div className="flex items-center gap-3 mb-2">
                 <Unlock className="w-8 h-8 text-yellow-500" />
-                <h1 className="text-3xl font-bold text-white">Unclaimed Token</h1>
+                <h1 className="text-3xl font-bold text-white">
+                  Unclaimed Token
+                </h1>
               </div>
-              <p className="text-neutral-300">This token hasn't been claimed by its creator yet</p>
+              <p className="text-neutral-300">
+                This token hasn't been claimed by its creator yet
+              </p>
             </div>
 
             {/* Token Info */}
@@ -255,17 +270,25 @@ export default function Meme() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-semibold text-neutral-400 mb-2">Description</h3>
+                    <h3 className="text-sm font-semibold text-neutral-400 mb-2">
+                      Description
+                    </h3>
                     <p className="text-neutral-300">
-                      {token.metadata?.description || "No description available"}
+                      {token.metadata?.description ||
+                        "No description available"}
                     </p>
                   </div>
 
                   {token.user?.socials && token.user.socials.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-neutral-400 mb-2">Creator</h3>
+                      <h3 className="text-sm font-semibold text-neutral-400 mb-2">
+                        Creator
+                      </h3>
                       {token.user.socials.map((social: any) => (
-                        <div key={social.id} className="flex items-center gap-2">
+                        <div
+                          key={social.id}
+                          className="flex items-center gap-2"
+                        >
                           <span className="text-neutral-300">
                             {social.type}: @{social.username}
                           </span>
@@ -278,10 +301,13 @@ export default function Meme() {
 
               {/* Info Banner */}
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-2">ℹ️ About Unclaimed Tokens</h3>
+                <h3 className="text-white font-semibold mb-2">
+                  ℹ️ About Unclaimed Tokens
+                </h3>
                 <p className="text-sm text-neutral-300">
-                  This token was created for a Lens creator who hasn't claimed ownership yet.
-                  Only the rightful creator (wallet owner of the associated Lens handle) can claim this token.
+                  This token was created for a Lens creator who hasn't claimed
+                  ownership yet. Only the rightful creator (wallet owner of the
+                  associated Lens handle) can claim this token.
                 </p>
               </div>
 
