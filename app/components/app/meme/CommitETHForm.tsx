@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { CoinsIcon, TrendingDown, CheckCircle, AlertTriangle } from "lucide-react";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
+import { toast } from "sonner";
 import {
   usePricePerTokenWei,
   useCommitToFairLaunch,
@@ -10,6 +11,7 @@ import {
   useGetExpectedClaim,
   useFairLaunchData,
   useRaiseEth,
+  useCalculateTokensForCommitment,
 } from "@/hooks/contracts/useMemedTokenSale";
 import {
   usePaymentTokenBalance,
@@ -82,12 +84,13 @@ function useDebounce<T>(value: T, delay: number): T {
 
 interface CommitETHFormProps {
   tokenId: bigint;
+  tokenName?: string; // Token name from API metadata
+  tokenSymbol?: string; // Token ticker/symbol from API metadata
   onCommitSuccess?: () => void; // Optional callback when commit is successful
 }
 
-const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
+const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCommitSuccess }: CommitETHFormProps) => {
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [calculatedTokens, setCalculatedTokens] = useState("");
 
   // State machine to track the unified transaction flow
   const [flowState, setFlowState] = useState<FlowState>("idle");
@@ -102,6 +105,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
     isPending: isCommitting,
     isConfirming: isConfirmingCommit,
     isConfirmed: isCommitConfirmed,
+    error: commitError,
   } = useCommitToFairLaunch();
   const {
     cancelCommit,
@@ -132,6 +136,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
     isPending: isApproving,
     isConfirming: isConfirmingApproval,
     isConfirmed: isApprovalConfirmed,
+    error: approvalError,
   } = useApprovePaymentToken();
 
   // Debounce the input amount
@@ -146,31 +151,19 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
   const { data: userCommitment, isLoading: isLoadingCommitment } =
     useGetUserCommitment(tokenId, address);
 
-  // Calculate MEME tokens from payment token amount
-  // Memoized with useCallback to prevent unnecessary re-creation on every render
-  const calculateMemeTokensFromPaymentToken = useCallback(
-    (paymentAmount: bigint) => {
-      if (!pricePerTokenWei || paymentAmount === 0n || !tokenDecimals)
-        return 0n;
-      // Convert payment token amount to 18 decimals for calculation
-      const paymentAmountIn18Decimals =
-        paymentAmount * 10n ** (18n - BigInt(tokenDecimals));
-      return (paymentAmountIn18Decimals * parseEther("1")) / pricePerTokenWei;
-    },
-    [pricePerTokenWei, tokenDecimals]
+  // Use contract function to calculate tokens and refund amount
+  // This shows users what they'll receive BEFORE they commit
+  // Accounts for oversubscription and refunds automatically
+  const { data: calculationResult } = useCalculateTokensForCommitment(
+    tokenId,
+    paymentTokenAmountAsBigInt
   );
 
-  // Update calculated MEME tokens when payment amount changes
-  useEffect(() => {
-    if (paymentTokenAmountAsBigInt > 0n) {
-      const tokens = calculateMemeTokensFromPaymentToken(
-        paymentTokenAmountAsBigInt
-      );
-      setCalculatedTokens(formatEther(tokens));
-    } else {
-      setCalculatedTokens("");
-    }
-  }, [paymentTokenAmountAsBigInt, calculateMemeTokensFromPaymentToken]);
+  // Extract tokens and refund amount from contract result
+  const calculatedTokens = calculationResult?.[0]
+    ? formatEther(calculationResult[0])
+    : "";
+  const refundAmount = calculationResult?.[1] ?? 0n;
 
   // Auto-progress: After approval confirms, wait for allowance update then auto-commit
   useEffect(() => {
@@ -210,7 +203,6 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
 
       // Clear form inputs
       setPaymentAmount("");
-      setCalculatedTokens("");
 
       // Show success message
       setShowSuccessMessage(true);
@@ -234,6 +226,24 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
       return () => clearTimeout(timer);
     }
   }, [isCommitConfirmed, flowState, refetchAllowance, onCommitSuccess]);
+
+  // Handle approval errors - reset flow state and show error message
+  useEffect(() => {
+    if (approvalError && flowState === "approving") {
+      setFlowState("error");
+      toast.error("Approval failed. Please try again.");
+      console.error("Approval error:", approvalError);
+    }
+  }, [approvalError, flowState]);
+
+  // Handle commit errors - reset flow state and show error message
+  useEffect(() => {
+    if (commitError && flowState === "committing") {
+      setFlowState("error");
+      toast.error("Commit failed. Please try again.");
+      console.error("Commit error:", commitError);
+    }
+  }, [commitError, flowState]);
 
   /**
    * Unified commit handler - single click orchestrates entire flow
@@ -387,7 +397,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
                 Tokens Reserved:{" "}
                 <span className="text-white">
                   {formatTokenAmount(formatEther(userCommitment.tokenAmount))}{" "}
-                  MEME
+                  {memeTokenSymbol || "MEME"}
                 </span>
               </div>
               {userCommitment.claimed && (
@@ -432,7 +442,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
 
       <div>
         <label className="block text-sm text-neutral-400 mb-1">
-          You'll Reserve MEME Tokens
+          You'll Reserve {memeTokenSymbol || "MEME"} Tokens
         </label>
         <input
           type="number"
@@ -442,6 +452,35 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
           className="w-full p-2 rounded-md bg-neutral-800 text-neutral-400 border border-neutral-700"
         />
       </div>
+
+      {/* Refund Warning - Shows if user will receive refund BEFORE they commit */}
+      {refundAmount > 0n && calculatedTokens && parseFloat(calculatedTokens) > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 -mt-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-yellow-400 font-semibold text-xs mb-1">
+                Amount Exceeds Target (40 ETH)
+              </div>
+              <div className="text-neutral-300 text-xs space-y-1">
+                <div>
+                  You'll receive: <span className="text-white font-medium">
+                    {formatTokenAmount(calculatedTokens)} {memeTokenSymbol || "MEME"} tokens
+                  </span>
+                </div>
+                <div>
+                  Refund amount: <span className="text-white font-medium">
+                    {formatTokenAmount(formatEther(refundAmount))} {tokenSymbol || "TOKEN"}
+                  </span>
+                </div>
+                <div className="text-xs text-yellow-300/80 mt-1">
+                  The target is 40 ETH. Your excess contribution will be refunded.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Expected Claim Preview - Shows actual tokens user will receive if oversubscribed */}
       {expectedClaim && isOversubscribed && calculatedTokens && parseFloat(calculatedTokens) > 0 && (
@@ -455,7 +494,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
               <div className="text-neutral-300 text-xs space-y-1">
                 <div>
                   Expected to receive: <span className="text-white font-medium">
-                    {formatTokenAmount(formatEther(expectedClaim[0]))} MEME
+                    {formatTokenAmount(formatEther(expectedClaim[0]))} {memeTokenSymbol || "MEME"}
                   </span>
                 </div>
                 {expectedClaim[1] > 0n && (
@@ -487,7 +526,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
       {pricePerTokenWei && tokenSymbol && (
         <div className="text-xs text-neutral-400 text-center">
           Price: {formatTokenAmount(formatEther(pricePerTokenWei))}{" "}
-          {tokenSymbol} per MEME token
+          {tokenSymbol} per {memeTokenSymbol || "MEME"} token
         </div>
       )}
 
@@ -518,7 +557,7 @@ const CommitETHForm = ({ tokenId, onCommitSuccess }: CommitETHFormProps) => {
         <div className="font-medium mb-1">⚠️ Fair Launch Commitment Info</div>
         <div className="text-xs text-yellow-300 space-y-1">
           <div>
-            • Commit {tokenSymbol || "TOKEN"} to reserve MEME tokens at fixed
+            • Commit {tokenSymbol || "TOKEN"} to reserve {memeTokenSymbol || "MEME"} tokens at fixed
             price
           </div>
           <div>

@@ -401,6 +401,8 @@ export default function Meme() {
               ) : (
                 <CommitETHForm
                   tokenId={contractTokenId}
+                  tokenName={token.metadata?.name}
+                  tokenSymbol={token.metadata?.ticker}
                   onCommitSuccess={handleCommitSuccess}
                 />
               )}

@@ -107,6 +107,31 @@ export function useGetExpectedClaim(
 }
 
 /**
+ * Hook to calculate tokens and refund amount for a given commitment.
+ * This is used to show users what they'll receive BEFORE they commit.
+ * Useful for showing refund amounts when launch is oversubscribed.
+ * @param launchId The ID of the fair launch.
+ * @param commitAmount The amount the user wants to commit (in wei).
+ * @returns Tuple [tokens: bigint, refundAmount: bigint]
+ */
+export function useCalculateTokensForCommitment(
+  launchId: bigint,
+  commitAmount: bigint,
+) {
+  return useReadContract({
+    address: TOKEN_SALE_ADDRESS,
+    abi: memedTokenSaleAbi,
+    functionName: "calculateTokensForCommitment",
+    args: [launchId, commitAmount],
+    query: {
+      enabled: launchId > 0n && commitAmount > 0n,
+      // Don't poll constantly - only refetch when amount changes
+      refetchInterval: false,
+    },
+  });
+}
+
+/**
  * Hook for the `commitToFairLaunch` write function.
  * This function takes _id and amount as parameters.
  */

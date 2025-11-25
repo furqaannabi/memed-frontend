@@ -192,6 +192,19 @@ export const memedTokenSaleAbi = [
     type: "function",
   },
   {
+    inputs: [
+      { internalType: "uint256", name: "_id", type: "uint256" },
+      { internalType: "uint256", name: "commitAmount", type: "uint256" },
+    ],
+    name: "calculateTokensForCommitment",
+    outputs: [
+      { internalType: "uint256", name: "tokens", type: "uint256" },
+      { internalType: "uint256", name: "refundAmount", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "uint256", name: "_id", type: "uint256" }],
     name: "cancelCommit",
     outputs: [],

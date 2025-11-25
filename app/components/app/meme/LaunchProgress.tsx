@@ -8,7 +8,8 @@ import {
 } from "@/hooks/contracts/useMemedTokenSale";
 import { formatEther } from "viem";
 import { useChainId, useSwitchChain } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { useEffect } from "react";
+import { getChainConfig } from "@/config/chains";
 import CountdownTimer from "./CountdownTimer";
 
 /**
@@ -45,10 +46,21 @@ interface LaunchProgressProps {
 const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
-  
+
+  // Get active chain from config (automatically handles dev vs prod)
+  const activeChain = getChainConfig().chains[0];
+
   // Check if we're on the correct network
-  const isCorrectNetwork = chainId === baseSepolia.id;
-  
+  const isCorrectNetwork = chainId === activeChain.id;
+
+  // Automatically switch to correct chain if on wrong network
+  useEffect(() => {
+    if (!isCorrectNetwork && switchChain) {
+      console.log(`Auto-switching to ${activeChain.name}...`);
+      switchChain({ chainId: activeChain.id });
+    }
+  }, [isCorrectNetwork, switchChain, activeChain.id, activeChain.name]);
+
   // First validate if the fair launch ID exists
   const { isValid, isLoading: validationLoading, currentMaxId } = useValidateFairLaunchId(tokenId);
   const { data: currentId } = useCurrentId();
@@ -80,7 +92,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
     ? Number(((totalCommitted - TARGET_ETH) * 100n) / TARGET_ETH)
     : 0;
 
-  // Show network error if on wrong chain
+  // Show network error if on wrong chain (fallback UI if auto-switch fails)
   if (!isCorrectNetwork) {
     return (
       <div className="bg-neutral-900 p-6 rounded-xl border border-red-500">
@@ -90,19 +102,19 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
         </h2>
         <div className="space-y-3">
           <div className="text-red-400 text-sm">
-            Contract is deployed on Base Sepolia testnet.
+            Contract is deployed on {activeChain.name}.
             <br />
             <span className="text-neutral-400 text-xs">
               Current network: Chain ID {chainId}
               <br />
-              Required network: Base Sepolia (Chain ID {baseSepolia.id})
+              Required network: {activeChain.name} (Chain ID {activeChain.id})
             </span>
           </div>
           <button
-            onClick={() => switchChain?.({ chainId: baseSepolia.id })}
+            onClick={() => switchChain?.({ chainId: activeChain.id })}
             className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-neutral-700 cursor-pointer"
           >
-            Switch to Base Sepolia
+            Switch to {activeChain.name}
           </button>
         </div>
       </div>
@@ -123,7 +135,8 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   }
 
   // Show specific error for invalid ID
-  if (!isValid && currentMaxId !== undefined) {
+  // Only show error when data is fully loaded to prevent flash during initial load
+  if (!isValid && currentMaxId !== undefined && !isLoading) {
     return (
       <div className="bg-neutral-900 p-6 rounded-xl">
         <h2 className="text-white text-lg font-semibold mb-4 flex gap-2 items-center">
