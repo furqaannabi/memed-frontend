@@ -160,10 +160,11 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   );
 
   // Extract tokens and refund amount from contract result
-  const calculatedTokens = calculationResult?.[0]
+  // Only show calculated tokens if user has entered an amount
+  const calculatedTokens = paymentAmount && calculationResult?.[0]
     ? formatEther(calculationResult[0])
     : "";
-  const refundAmount = calculationResult?.[1] ?? 0n;
+  const refundAmount = paymentAmount && calculationResult?.[1] ? calculationResult[1] : 0n;
 
   // Auto-progress: After approval confirms, wait for allowance update then auto-commit
   useEffect(() => {

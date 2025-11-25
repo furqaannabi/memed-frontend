@@ -106,7 +106,7 @@ export default function LaunchPage() {
       };
 
       // 5. Call the API directly using apiClient
-      const result = await apiClient.post(
+      const result = await apiClient.post<{ fairLaunchId?: number; address?: string }>(
         API_ENDPOINTS.CREATE_TOKEN,
         formData,
         { headers }, // 60s timeout, no retries
