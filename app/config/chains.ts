@@ -80,11 +80,11 @@ export function getChainConfig() {
     // Use Base mainnet only
     // Real transactions with real ETH - be very careful!
     return {
-      chains: [base] as const,
+      chains: [baseSepolia] as const,
       transports: {
         // Map chain ID (8453) to RPC endpoint
         // base.rpcUrls.default.http[0] = "https://mainnet.base.org"
-        [base.id]: base.rpcUrls.default.http[0]!,
+        [baseSepolia.id]: baseSepolia.rpcUrls.default.http[0]!,
       },
     };
   }
