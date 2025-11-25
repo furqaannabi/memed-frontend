@@ -395,12 +395,21 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
                 </span>
               </div>
               <div className="font-medium">
-                Tokens Reserved:{" "}
+                Expected Tokens:{" "}
                 <span className="text-white">
                   {formatTokenAmount(formatEther(userCommitment.tokenAmount))}{" "}
                   {memeTokenSymbol || "MEME"}
                 </span>
               </div>
+              {expectedClaim && expectedClaim[1] > 0n && (
+                <div className="font-medium">
+                  Expected Refund:{" "}
+                  <span className="text-white">
+                    {formatTokenAmount(formatEther(expectedClaim[1]))}{" "}
+                    {tokenSymbol || "TOKEN"}
+                  </span>
+                </div>
+              )}
               {userCommitment.claimed && (
                 <div className="text-green-400 font-medium">
                   ✅ Tokens Claimed
@@ -443,7 +452,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
 
       <div>
         <label className="block text-sm text-neutral-400 mb-1">
-          You'll Reserve {memeTokenSymbol || "MEME"} Tokens
+          Expected {memeTokenSymbol || "MEME"} Tokens
         </label>
         <input
           type="number"
@@ -558,7 +567,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
         <div className="font-medium mb-1">⚠️ Fair Launch Commitment Info</div>
         <div className="text-xs text-yellow-300 space-y-1">
           <div>
-            • Commit {tokenSymbol || "TOKEN"} to reserve {memeTokenSymbol || "MEME"} tokens at fixed
+            • Commit {tokenSymbol || "TOKEN"} to get expected {memeTokenSymbol || "MEME"} tokens at fixed
             price
           </div>
           <div>
