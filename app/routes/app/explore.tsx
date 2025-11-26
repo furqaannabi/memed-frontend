@@ -9,6 +9,8 @@ import { memeTokensLoader, type LoaderData } from "@/lib/api/loaders";
 import type { Token } from "@/hooks/api/useAuth";
 import { Unlock, Grid3x3, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
+import { apiClient } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/config";
 
 // Export the loader for this route, following the project convention
 export { memeTokensLoader as loader };
@@ -26,66 +28,194 @@ export default function Explore() {
   // Revalidator hook to refetch data from loader
   const revalidator = useRevalidator();
 
+  // Initialize active tab from URL params (if present) or default to "claimed"
+  // This ensures the tab state matches the URL on initial render and navigation
+  const initialTab = useMemo(() => {
+    const claimedParam = searchParams.get('claimed');
+    if (claimedParam === 'false') return 'unclaimed';
+    return 'claimed'; // Default to 'claimed' (claimed tokens)
+  }, [searchParams.get('claimed')]);
+
   // Tab state for switching between claimed and unclaimed tokens
-  const [activeTab, setActiveTab] = useState<"all" | "unclaimed">("all");
+  const [activeTab, setActiveTab] = useState<"claimed" | "unclaimed">(initialTab);
+
+  // Detect if loaded data doesn't match the active tab
+  // This is more reliable than checking URL since URL updates are async
+  const isStaleData = useMemo(() => {
+    if (!loadedTokens || loadedTokens.length === 0) {
+      console.log('🔍 Stale check: No tokens loaded');
+      return false;
+    }
+
+    // Check if first token's claimed status matches active tab
+    // If tab is "claimed", tokens should be claimed (true)
+    // If tab is "unclaimed", tokens should be unclaimed (false)
+    const expectedClaimed = activeTab === 'claimed';
+    const firstToken = loadedTokens[0];
+
+    if (!firstToken) {
+      console.log('🔍 Stale check: No first token');
+      return false;
+    }
+
+    const isStale = firstToken.claimed !== expectedClaimed;
+    console.log('🔍 Stale check:', {
+      activeTab,
+      expectedClaimed,
+      actualClaimed: firstToken.claimed,
+      tokenName: firstToken.metadata?.name,
+      isStale
+    });
+
+    // If data doesn't match active tab, it's stale
+    return isStale;
+  }, [loadedTokens, activeTab]);
+
+  // Show loading state during navigation or when data is stale
+  const isLoading = revalidator.state === "loading" || isStaleData;
+
+  // Sync activeTab state with URL params when URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const claimedParam = searchParams.get('claimed');
+    const expectedTab = claimedParam === 'false' ? 'unclaimed' : 'claimed';
+
+    // Only sync if not already in the expected state (to avoid loops)
+    if (activeTab !== expectedTab) {
+      console.log('🔄 Syncing tab with URL:', { claimedParam, expectedTab, currentTab: activeTab });
+      setActiveTab(expectedTab);
+    }
+  }, [searchParams.get('claimed')]);
+
+  // Initialize URL params on mount if not present
+  useEffect(() => {
+    const currentClaimed = searchParams.get('claimed');
+    const currentPage = searchParams.get('page');
+
+    // Set default params if they're missing
+    if (!currentClaimed || !currentPage) {
+      setSearchParams({
+        page: currentPage || '1',
+        claimed: currentClaimed || 'true'
+      }, { replace: true });
+    }
+  }, []); // Only run on mount
+
+  // State for tab counts
+  const [claimedCount, setClaimedCount] = useState<number>(0);
+  const [unclaimedCount, setUnclaimedCount] = useState<number>(0);
+
+  // Fetch counts for both tabs
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        // Fetch claimed count
+        const claimedResponse = await apiClient.get<{ tokens: any[], pagination: any }>(
+          `${API_ENDPOINTS.TOKENS}?claimed=true&limit=1`
+        );
+        setClaimedCount(claimedResponse.data?.pagination?.totalCount || 0);
+
+        // Fetch unclaimed count
+        const unclaimedResponse = await apiClient.get<{ tokens: any[], pagination: any }>(
+          `${API_ENDPOINTS.TOKENS}?claimed=false&limit=1`
+        );
+        setUnclaimedCount(unclaimedResponse.data?.pagination?.totalCount || 0);
+      } catch (error) {
+        console.error("Error fetching tab counts:", error);
+      }
+    };
+
+    fetchCounts();
+  }, [revalidator.state]); // Refetch counts when data is revalidated
 
   // Sync active tab with URL search params for proper backend filtering
   useEffect(() => {
-    const currentPage = searchParams.get('page') || '1';
-    const claimed = activeTab === "all" ? "true" : "false";
+    const currentPage = '1'; // Reset to page 1 when switching tabs
+    const claimed = activeTab === "claimed" ? "true" : "false";
 
-    setSearchParams({ page: currentPage, claimed });
-    revalidator.revalidate();
-  }, [activeTab]); // Refetch when tab changes
+    // Only update if the URL params don't match the expected values
+    const currentClaimed = searchParams.get('claimed');
+    if (currentClaimed !== claimed) {
+      console.log('=== TAB SWITCH - UPDATING URL ===');
+      console.log('Active Tab:', activeTab);
+      console.log('Current URL claimed:', currentClaimed);
+      console.log('Setting URL params to:', { page: currentPage, claimed });
+
+      // Update URL params - this triggers a navigation which will call the loader
+      setSearchParams({ page: currentPage, claimed }, { replace: true });
+    }
+  }, [activeTab]); // Only depend on activeTab, not setSearchParams
 
   // Debug logging - see what data we're getting from the API
   useEffect(() => {
     console.log("=== EXPLORE PAGE DEBUG ===");
+    console.log("Active Tab:", activeTab);
+    console.log("URL Params:", {
+      page: searchParams.get('page'),
+      claimed: searchParams.get('claimed')
+    });
     console.log("Loaded tokens count:", loadedTokens?.length || 0);
     console.log("Loaded tokens data:", loadedTokens);
     console.log("Pagination:", pagination);
     console.log("Error:", error);
     console.log("========================");
-  }, [loadedTokens, pagination, error]);
+  }, [loadedTokens, pagination, error, activeTab, searchParams]);
 
   // Batch-fetch contract data for all tokens ONCE at page level
   // This eliminates redundant contract calls for price/supply data
-  const { dataMap: contractDataMap } = useTokensBatchData(
-    (loadedTokens || []).map((token) => token.fairLaunchId)
-  );
+  // Ensure loadedTokens is an array before mapping
+  const tokenIds = useMemo(() => {
+    if (!Array.isArray(loadedTokens)) return [];
+    return loadedTokens.map((token) => token.fairLaunchId).filter(Boolean);
+  }, [loadedTokens]);
+
+  const { dataMap: contractDataMap } = useTokensBatchData(tokenIds);
 
   // Tokens are already filtered by backend based on 'claimed' query param
   // No need for client-side filtering anymore!
-  const tokensToDisplay = loadedTokens || [];
+  // Ensure tokensToDisplay is always an array
+  const tokensToDisplay = Array.isArray(loadedTokens) ? loadedTokens : [];
 
   // Adapt the loaded data to the format expected by the MemeTokenCard component
-  const memeTokens = tokensToDisplay.map((token) => ({
-    id: token.id,
-    name: token.metadata?.name || "Unnamed Token",
-    creator:
-      token.user?.address
-        ? `${token.user.address.slice(0, 6)}...${token.user.address.slice(-4)}`
-        : token.userId && typeof token.userId === "string" && token.userId.length >= 4
-          ? `user...${token.userId.slice(-4)}`
-          : "Unknown",
-    ticker: token.metadata?.ticker || "UNKN",
-    description: token.metadata?.description || "No description",
-    price: 0,
-    marketCap: "N/A",
-    progress: 0,
-    active: false,
-    badge: token.claimed ? "Claimed" : "Unclaimed",
-    badgeColor: token.claimed ? "bg-green-500" : "bg-yellow-500",
-    image: token.metadata?.imageKey || meme,
-    fairLaunchId: token.fairLaunchId,
-    address: token.address,
-    createdAt: token.createdAt,
-  }));
+  const memeTokens = tokensToDisplay.map((token) => {
+    // Debug each token's claimed status
+    if (tokensToDisplay.length > 0 && tokensToDisplay.indexOf(token) === 0) {
+      console.log('=== FIRST TOKEN DEBUG ===');
+      console.log('Token:', token.metadata?.name);
+      console.log('Token.claimed:', token.claimed);
+      console.log('Active Tab:', activeTab);
+      console.log('Expected claimed value:', activeTab === "claimed" ? true : false);
+      console.log('=======================');
+    }
+
+    return {
+      id: token.id,
+      name: token.metadata?.name || "Unnamed Token",
+      creator:
+        token.user?.address
+          ? `${token.user.address.slice(0, 6)}...${token.user.address.slice(-4)}`
+          : token.userId && typeof token.userId === "string" && token.userId.length >= 4
+            ? `user...${token.userId.slice(-4)}`
+            : "Unknown",
+      ticker: token.metadata?.ticker || "UNKN",
+      description: token.metadata?.description || "No description",
+      price: 0,
+      marketCap: "N/A",
+      progress: 0,
+      active: false,
+      badge: token.claimed ? "Claimed" : "Unclaimed",
+      badgeColor: token.claimed ? "bg-green-500" : "bg-yellow-500",
+      image: token.metadata?.imageKey || meme,
+      fairLaunchId: token.fairLaunchId,
+      address: token.address,
+      createdAt: token.createdAt,
+      heat: token.heat || 0, // Add heat data from API
+    };
+  });
 
   // Create leaderboard from loaded tokens sorted by heat score
   // Only show leaderboard on "claimed" tab
   const leaderboard = useMemo(() => {
-    if (!loadedTokens || loadedTokens.length === 0 || activeTab !== "all") {
+    if (!loadedTokens || loadedTokens.length === 0 || activeTab !== "claimed") {
       return [];
     }
 
@@ -138,16 +268,16 @@ export default function Explore() {
   // Pagination handlers
   const handleNextPage = () => {
     if (pagination?.hasNextPage) {
-      setSearchParams({ page: String(pagination.currentPage + 1) });
-      revalidator.revalidate();
+      const claimed = searchParams.get('claimed') || 'true';
+      setSearchParams({ page: String(pagination.currentPage + 1), claimed });
       window.scrollTo(0, 0);
     }
   };
 
   const handlePrevPage = () => {
     if (pagination?.hasPreviousPage) {
-      setSearchParams({ page: String(pagination.currentPage - 1) });
-      revalidator.revalidate();
+      const claimed = searchParams.get('claimed') || 'true';
+      setSearchParams({ page: String(pagination.currentPage - 1), claimed });
       window.scrollTo(0, 0);
     }
   };
@@ -169,59 +299,71 @@ export default function Explore() {
         <div className="flex justify-between items-center border-b border-neutral-800">
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab("all")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
-                activeTab === "all"
+              onClick={() => setActiveTab("claimed")}
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                activeTab === "claimed"
                   ? "border-green-500 text-white"
                   : "border-transparent text-neutral-400 hover:text-neutral-300"
               }`}
             >
               <Grid3x3 className="w-4 h-4" />
-              Claimed {pagination?.totalCount ? `(${pagination.totalCount})` : ''}
+              Claimed {claimedCount > 0 ? `(${claimedCount})` : ''}
             </button>
             <button
               onClick={() => setActiveTab("unclaimed")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === "unclaimed"
                   ? "border-yellow-500 text-white"
                   : "border-transparent text-neutral-400 hover:text-neutral-300"
               }`}
             >
               <Unlock className="w-4 h-4" />
-              Unclaimed {pagination?.totalCount ? `(${pagination.totalCount})` : ''}
+              Unclaimed {unclaimedCount > 0 ? `(${unclaimedCount})` : ''}
             </button>
           </div>
 
           {/* Refresh button to refetch latest tokens */}
           <button
             onClick={() => revalidator.revalidate()}
-            disabled={revalidator.state === "loading"}
+            disabled={isLoading}
             className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Refresh token list"
           >
             <RefreshCw
-              className={`w-4 h-4 ${revalidator.state === "loading" ? "animate-spin" : ""}`}
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
             />
-            {revalidator.state === "loading" ? "Refreshing..." : "Refresh"}
+            {isLoading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
 
-        {/* Show message if no tokens */}
-        {memeTokens.length === 0 && (
+        {/* Loading state - show while data is being fetched or URL/data mismatch */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="w-8 h-8 animate-spin text-green-500" />
+              <p className="text-neutral-400">Loading tokens...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Show message if no tokens and not loading */}
+        {!isLoading && memeTokens.length === 0 && (
           <div className="text-center py-12 text-neutral-400">
             <p className="text-lg mb-4">
-              {activeTab === "all"
+              {activeTab === "claimed"
                 ? "No claimed tokens yet. Check the Unclaimed tab!"
                 : "No unclaimed tokens at the moment."}
             </p>
           </div>
         )}
 
-        {/* Tokens display */}
-        {memeTokens.length > 0 && (
+        {/* Tokens display - hide while loading to prevent showing stale data */}
+        {!isLoading && memeTokens.length > 0 && (
           <>
             {/* Trending tokens carousel - only for claimed tokens */}
-            {activeTab === "all" && (
+            {activeTab === "claimed" && (
               <div className="overflow-x-auto w-full scrollbar-hide pb-4 mb-4">
                 <div className="flex gap-4 w-full overflow-x-auto">
                   {memeTokens.slice(0, 7).map((token) => (
@@ -244,7 +386,7 @@ export default function Explore() {
                   <MemeTokensList tokens={memeTokens} contractDataMap={contractDataMap} />
 
                   {/* Leaderboard - only for claimed tokens */}
-                  {activeTab === "all" && <Leaderboard items={leaderboard} />}
+                  {activeTab === "claimed" && <Leaderboard items={leaderboard} />}
                 </div>
               </div>
             </div>

@@ -114,30 +114,45 @@ function useSingleTokenData(fairLaunchId: string): TokenContractData {
 export function useTokensBatchData(
   fairLaunchIds: (string | undefined)[]
 ): TokensBatchDataReturn {
-  // Filter out undefined/null IDs and deduplicate
+  // Ensure fairLaunchIds is always an array
+  const safeIds = Array.isArray(fairLaunchIds) ? fairLaunchIds : [];
+
+  // Filter and deduplicate - stable reference to avoid infinite loops
   const validIds = useMemo(() => {
     return Array.from(
-      new Set(fairLaunchIds.filter((id): id is string => !!id))
+      new Set(safeIds.filter((id): id is string => !!id))
     );
-  }, [fairLaunchIds]);
+  }, [safeIds.join(',')]);
 
-  // Fetch data for each token
-  // Note: These hooks use react-query under the hood, so they're automatically
-  // cached and deduplicated. Multiple calls with the same ID won't result in
-  // duplicate network requests.
-  const results = validIds.map(id => ({
+  // WORKAROUND for hook order violations:
+  // We'll use a stable maximum number of hooks by always calling hooks for a fixed array
+  // This prevents React from seeing different hook counts between renders
+  // NOTE: This is not ideal and should be refactored to use React Query's useQueries
+
+  // Create a stable array with max expected tokens (e.g., 20 for pagination)
+  // Fill with empty strings for unused slots
+  const MAX_TOKENS = 20;
+  const paddedIds = useMemo(() => {
+    const padded = [...validIds];
+    while (padded.length < MAX_TOKENS) {
+      padded.push(''); // Empty string for unused slots
+    }
+    return padded.slice(0, MAX_TOKENS); // Ensure max length
+  }, [validIds.join(',')]);
+
+  // Now we always call exactly MAX_TOKENS hooks, fixing the hook order
+  const results = paddedIds.map(id => ({
     id,
-    data: useSingleTokenData(id)
+    data: useSingleTokenData(id || '0') // Use '0' for empty slots (will return default data)
   }));
 
-  // Build the data map
-  const dataMap = useMemo(() => {
-    const map: Record<string, TokenContractData> = {};
-    results.forEach(({ id, data }) => {
-      map[id] = data;
-    });
-    return map;
-  }, [results]);
+  // Build the data map - only include valid IDs (exclude padding)
+  const dataMap: Record<string, TokenContractData> = {};
+  results.forEach(({ id, data }) => {
+    if (id && id !== '0') { // Skip empty padding slots
+      dataMap[id] = data;
+    }
+  });
 
   // Calculate aggregate loading states
   const isLoading = results.some(r => r.data.isLoading);

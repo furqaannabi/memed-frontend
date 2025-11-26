@@ -16,6 +16,7 @@ interface MemeToken {
   badge?: string;
   badgeColor?: string;
   createdAt?: string; // Added for sorting by time
+  heat?: bigint | number; // Heat score from API (can be bigint or number)
 }
 
 interface MemeTokensListProps {
@@ -57,6 +58,10 @@ export function MemeTokensList({ tokens, contractDataMap }: MemeTokensListProps)
 
   // Sort tokens based on selected option
   const sortedTokens = useMemo(() => {
+    // Safety check: ensure tokens is an array
+    if (!Array.isArray(tokens) || tokens.length === 0) {
+      return [];
+    }
     const tokensCopy = [...tokens];
 
     switch (sortBy) {

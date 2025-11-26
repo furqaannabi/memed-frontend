@@ -123,7 +123,12 @@ const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
           {/* Bottom Row */}
           <div className="flex flex-wrap items-center gap-3 mt-auto">
             <div className="flex items-center text-orange-400 font-semibold">
-              <FlameIcon size={14} /> <span className="ml-1">0 Heat</span>
+              <FlameIcon size={14} />{" "}
+              <span className="ml-1">
+                {typeof token.heat === 'bigint'
+                  ? Number(token.heat).toLocaleString()
+                  : (token.heat || 0).toLocaleString()} Heat
+              </span>
             </div>
 
             <button className="bg-green-500 hover:bg-green-600 text-black font-medium px-4 py-1.5 cursor-pointer rounded-md flex items-center gap-2 transition">
