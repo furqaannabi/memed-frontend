@@ -186,3 +186,14 @@ export function useClaimCreatorIncentives() {
     error,
   };
 }
+
+/**
+ * Hook for getting creator allocation for a token
+ */
+export function useGetCreatorAllocation() {
+  return useReadContract({
+    address: ENGAGE_TO_EARN_ADDRESS,
+    abi: memedEngageToEarnAbi,
+    functionName: "CREATOR_INCENTIVES_ALLOCATION",
+  });
+}

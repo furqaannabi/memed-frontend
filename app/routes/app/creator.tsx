@@ -15,7 +15,9 @@ import { useAuthStore } from "@/store/auth";
 import {
   useCreatorData,
   useClaimCreatorIncentives,
+  useGetCreatorAllocation,
 } from "@/hooks/contracts/useMemedEngageToEarn";
+
 import { useCreatorActivity } from "@/hooks/contracts/useCreatorActivity";
 import { useTokenHeat } from "@/hooks/contracts/useMemedFactory";
 import { ConnectWalletPrompt } from "@/components/shared/ConnectWalletPrompt";
@@ -63,6 +65,10 @@ export default function CreatorDashboard() {
     isConfirming: isClaimConfirming,
     isConfirmed: isClaimConfirmed,
   } = useClaimCreatorIncentives();
+
+  // Claim hook
+  const { data: creatorTotalAllocation, isPending: isAllocationPending } =
+    useGetCreatorAllocation();
 
   // Refetch data after successful claim
   useEffect(() => {
@@ -117,9 +123,9 @@ export default function CreatorDashboard() {
   const tokenName = selectedToken?.metadata?.name || "Token";
 
   // Parse creator data
-  const totalBalance = creatorData ? creatorData[1] + creatorData[2] : 0n;
+  const totalBalance = creatorTotalAllocation ? creatorTotalAllocation : 0n;
   const unlockedBalance = creatorData ? creatorData[2] : 0n;
-  const lockedBalance = totalBalance - unlockedBalance;
+  const lockedBalance = creatorData ? creatorData[1] : 0n;
 
   // Check if can claim (unlocking happens automatically via factory contract)
   const canClaim = unlockedBalance > 0n;
