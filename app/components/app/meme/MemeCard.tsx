@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FlameIcon, Share2Icon, Copy, Check, User } from "lucide-react";
 import type { Token } from "@/hooks/api/useAuth"; // Re-added Token import
 import meme from "@/assets/images/meme.png"; // Fallback placeholder image
+import { useTokenHeat } from "@/hooks/contracts/useMemedFactory"; // Import contract heat hook
 
 interface MemeIntroCardProps {
   token: Token; // Reverted to Token type
@@ -10,6 +11,11 @@ interface MemeIntroCardProps {
 const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  // Fetch real-time heat from smart contract (auto-refreshes every 30 seconds)
+  const { data: contractHeat, isLoading: isLoadingHeat } = useTokenHeat(
+    token.address as `0x${string}`
+  );
 
   // Safely extract image URL with multiple fallback options to prevent undefined access errors
   // Priority: 1) token.image.s3Key, 2) token.metadata?.imageKey, 3) placeholder image
@@ -125,9 +131,9 @@ const MemeIntroCard = ({ token }: MemeIntroCardProps) => {
             <div className="flex items-center text-orange-400 font-semibold">
               <FlameIcon size={14} />{" "}
               <span className="ml-1">
-                {typeof token.heat === 'bigint'
-                  ? Number(token.heat).toLocaleString()
-                  : (token.heat || 0).toLocaleString()} Heat
+                {isLoadingHeat
+                  ? '...'
+                  : (contractHeat ? Number(contractHeat).toLocaleString() : '0')} Heat
               </span>
             </div>
 

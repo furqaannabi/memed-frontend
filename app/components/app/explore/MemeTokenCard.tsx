@@ -16,7 +16,6 @@ interface MemeTokenCardProps {
     active?: boolean;
     badge?: string;
     badgeColor?: string;
-    heat?: bigint | number; // Heat score from API (can be bigint or number)
   };
   linkTo?: string; // Optional custom link destination
   isUnclaimed?: boolean; // Whether this token is unclaimed
@@ -103,14 +102,6 @@ export function MemeTokenCard({
           </div>
 
           <div className="flex items-center justify-between text-[10px] sm:text-xs mb-1 sm:mb-2">
-            <span className="text-orange-500 font-medium flex items-center gap-1">
-              <Flame size={12} />{" "}
-              <span className="text-white">
-                {typeof token.heat === 'bigint'
-                  ? Number(token.heat).toLocaleString()
-                  : (token.heat || 0).toLocaleString()} Heat
-              </span>
-            </span>
             <span
               className="text-gray-400 text-[10px] sm:text-xs truncate"
               title={`Market Cap: ${token.marketCap} ETH`}

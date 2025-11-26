@@ -7,7 +7,13 @@ import meme from "@/assets/images/meme.png";
 import { HorizontalCard } from "@/components/app/explore/HorizontalCard";
 import { memeTokensLoader, type LoaderData } from "@/lib/api/loaders";
 import type { Token } from "@/hooks/api/useAuth";
-import { Unlock, Grid3x3, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Unlock,
+  Grid3x3,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/config";
@@ -17,7 +23,10 @@ export { memeTokensLoader as loader };
 
 export default function Explore() {
   // Use the data loaded by the loader - now includes pagination
-  const loaderData = useLoaderData() as LoaderData<{ tokens: Token[], pagination: any }>;
+  const loaderData = useLoaderData() as LoaderData<{
+    tokens: Token[];
+    pagination: any;
+  }>;
   const loadedTokens = loaderData.data?.tokens || [];
   const pagination = loaderData.data?.pagination;
   const error = loaderData.error;
@@ -31,40 +40,42 @@ export default function Explore() {
   // Initialize active tab from URL params (if present) or default to "claimed"
   // This ensures the tab state matches the URL on initial render and navigation
   const initialTab = useMemo(() => {
-    const claimedParam = searchParams.get('claimed');
-    if (claimedParam === 'false') return 'unclaimed';
-    return 'claimed'; // Default to 'claimed' (claimed tokens)
-  }, [searchParams.get('claimed')]);
+    const claimedParam = searchParams.get("claimed");
+    if (claimedParam === "false") return "unclaimed";
+    return "claimed"; // Default to 'claimed' (claimed tokens)
+  }, [searchParams.get("claimed")]);
 
   // Tab state for switching between claimed and unclaimed tokens
-  const [activeTab, setActiveTab] = useState<"claimed" | "unclaimed">(initialTab);
+  const [activeTab, setActiveTab] = useState<"claimed" | "unclaimed">(
+    initialTab
+  );
 
   // Detect if loaded data doesn't match the active tab
   // This is more reliable than checking URL since URL updates are async
   const isStaleData = useMemo(() => {
     if (!loadedTokens || loadedTokens.length === 0) {
-      console.log('🔍 Stale check: No tokens loaded');
+      console.log("🔍 Stale check: No tokens loaded");
       return false;
     }
 
     // Check if first token's claimed status matches active tab
     // If tab is "claimed", tokens should be claimed (true)
     // If tab is "unclaimed", tokens should be unclaimed (false)
-    const expectedClaimed = activeTab === 'claimed';
+    const expectedClaimed = activeTab === "claimed";
     const firstToken = loadedTokens[0];
 
     if (!firstToken) {
-      console.log('🔍 Stale check: No first token');
+      console.log("🔍 Stale check: No first token");
       return false;
     }
 
     const isStale = firstToken.claimed !== expectedClaimed;
-    console.log('🔍 Stale check:', {
+    console.log("🔍 Stale check:", {
       activeTab,
       expectedClaimed,
       actualClaimed: firstToken.claimed,
       tokenName: firstToken.metadata?.name,
-      isStale
+      isStale,
     });
 
     // If data doesn't match active tab, it's stale
@@ -76,27 +87,34 @@ export default function Explore() {
 
   // Sync activeTab state with URL params when URL changes (e.g., browser back/forward)
   useEffect(() => {
-    const claimedParam = searchParams.get('claimed');
-    const expectedTab = claimedParam === 'false' ? 'unclaimed' : 'claimed';
+    const claimedParam = searchParams.get("claimed");
+    const expectedTab = claimedParam === "false" ? "unclaimed" : "claimed";
 
     // Only sync if not already in the expected state (to avoid loops)
     if (activeTab !== expectedTab) {
-      console.log('🔄 Syncing tab with URL:', { claimedParam, expectedTab, currentTab: activeTab });
+      console.log("🔄 Syncing tab with URL:", {
+        claimedParam,
+        expectedTab,
+        currentTab: activeTab,
+      });
       setActiveTab(expectedTab);
     }
-  }, [searchParams.get('claimed')]);
+  }, [searchParams.get("claimed")]);
 
   // Initialize URL params on mount if not present
   useEffect(() => {
-    const currentClaimed = searchParams.get('claimed');
-    const currentPage = searchParams.get('page');
+    const currentClaimed = searchParams.get("claimed");
+    const currentPage = searchParams.get("page");
 
     // Set default params if they're missing
     if (!currentClaimed || !currentPage) {
-      setSearchParams({
-        page: currentPage || '1',
-        claimed: currentClaimed || 'true'
-      }, { replace: true });
+      setSearchParams(
+        {
+          page: currentPage || "1",
+          claimed: currentClaimed || "true",
+        },
+        { replace: true }
+      );
     }
   }, []); // Only run on mount
 
@@ -109,15 +127,17 @@ export default function Explore() {
     const fetchCounts = async () => {
       try {
         // Fetch claimed count
-        const claimedResponse = await apiClient.get<{ tokens: any[], pagination: any }>(
-          `${API_ENDPOINTS.TOKENS}?claimed=true&limit=1`
-        );
+        const claimedResponse = await apiClient.get<{
+          tokens: any[];
+          pagination: any;
+        }>(`${API_ENDPOINTS.TOKENS}?claimed=true&limit=1`);
         setClaimedCount(claimedResponse.data?.pagination?.totalCount || 0);
 
         // Fetch unclaimed count
-        const unclaimedResponse = await apiClient.get<{ tokens: any[], pagination: any }>(
-          `${API_ENDPOINTS.TOKENS}?claimed=false&limit=1`
-        );
+        const unclaimedResponse = await apiClient.get<{
+          tokens: any[];
+          pagination: any;
+        }>(`${API_ENDPOINTS.TOKENS}?claimed=false&limit=1`);
         setUnclaimedCount(unclaimedResponse.data?.pagination?.totalCount || 0);
       } catch (error) {
         console.error("Error fetching tab counts:", error);
@@ -129,16 +149,16 @@ export default function Explore() {
 
   // Sync active tab with URL search params for proper backend filtering
   useEffect(() => {
-    const currentPage = '1'; // Reset to page 1 when switching tabs
+    const currentPage = "1"; // Reset to page 1 when switching tabs
     const claimed = activeTab === "claimed" ? "true" : "false";
 
     // Only update if the URL params don't match the expected values
-    const currentClaimed = searchParams.get('claimed');
+    const currentClaimed = searchParams.get("claimed");
     if (currentClaimed !== claimed) {
-      console.log('=== TAB SWITCH - UPDATING URL ===');
-      console.log('Active Tab:', activeTab);
-      console.log('Current URL claimed:', currentClaimed);
-      console.log('Setting URL params to:', { page: currentPage, claimed });
+      console.log("=== TAB SWITCH - UPDATING URL ===");
+      console.log("Active Tab:", activeTab);
+      console.log("Current URL claimed:", currentClaimed);
+      console.log("Setting URL params to:", { page: currentPage, claimed });
 
       // Update URL params - this triggers a navigation which will call the loader
       setSearchParams({ page: currentPage, claimed }, { replace: true });
@@ -150,8 +170,8 @@ export default function Explore() {
     console.log("=== EXPLORE PAGE DEBUG ===");
     console.log("Active Tab:", activeTab);
     console.log("URL Params:", {
-      page: searchParams.get('page'),
-      claimed: searchParams.get('claimed')
+      page: searchParams.get("page"),
+      claimed: searchParams.get("claimed"),
     });
     console.log("Loaded tokens count:", loadedTokens?.length || 0);
     console.log("Loaded tokens data:", loadedTokens);
@@ -179,23 +199,27 @@ export default function Explore() {
   const memeTokens = tokensToDisplay.map((token) => {
     // Debug each token's claimed status
     if (tokensToDisplay.length > 0 && tokensToDisplay.indexOf(token) === 0) {
-      console.log('=== FIRST TOKEN DEBUG ===');
-      console.log('Token:', token.metadata?.name);
-      console.log('Token.claimed:', token.claimed);
-      console.log('Active Tab:', activeTab);
-      console.log('Expected claimed value:', activeTab === "claimed" ? true : false);
-      console.log('=======================');
+      console.log("=== FIRST TOKEN DEBUG ===");
+      console.log("Token:", token.metadata?.name);
+      console.log("Token.claimed:", token.claimed);
+      console.log("Active Tab:", activeTab);
+      console.log(
+        "Expected claimed value:",
+        activeTab === "claimed" ? true : false
+      );
+      console.log("=======================");
     }
 
     return {
       id: token.id,
       name: token.metadata?.name || "Unnamed Token",
-      creator:
-        token.user?.address
-          ? `${token.user.address.slice(0, 6)}...${token.user.address.slice(-4)}`
-          : token.userId && typeof token.userId === "string" && token.userId.length >= 4
-            ? `user...${token.userId.slice(-4)}`
-            : "Unknown",
+      creator: token.user?.address
+        ? `${token.user.address.slice(0, 6)}...${token.user.address.slice(-4)}`
+        : token.userId &&
+          typeof token.userId === "string" &&
+          token.userId.length >= 4
+        ? `user...${token.userId.slice(-4)}`
+        : "Unknown",
       ticker: token.metadata?.ticker || "UNKN",
       description: token.metadata?.description || "No description",
       price: 0,
@@ -208,12 +232,13 @@ export default function Explore() {
       fairLaunchId: token.fairLaunchId,
       address: token.address,
       createdAt: token.createdAt,
-      heat: token.heat || 0, // Add heat data from API
     };
   });
 
   // Create leaderboard from loaded tokens sorted by heat score
   // Only show leaderboard on "claimed" tab
+  // Temporarily disabled - backend doesn't return heat data yet
+  /*
   const leaderboard = useMemo(() => {
     if (!loadedTokens || loadedTokens.length === 0 || activeTab !== "claimed") {
       return [];
@@ -231,14 +256,14 @@ export default function Explore() {
         id: token.id || index + 1,
         rank: index + 1,
         name: token.metadata?.name || "Unnamed Token",
-        username:
-          token.user?.socials?.[0]?.username
-            ? `@${token.user.socials[0].username}`
-            : token.user?.address
-              ? `@${token.user.address.slice(0, 6)}...`
-              : "@unknown",
+        username: token.user?.socials?.[0]?.username
+          ? `@${token.user.socials[0].username}`
+          : token.user?.address
+          ? `@${token.user.address.slice(0, 6)}...`
+          : "@unknown",
         image: token.metadata?.imageKey || meme,
-        score: typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0,
+        score:
+          typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0,
         engagement:
           typeof token.heat === "bigint"
             ? Number(token.heat) >= 1000
@@ -247,15 +272,20 @@ export default function Explore() {
             : "0",
       }));
   }, [loadedTokens, activeTab]);
+  */
+  const leaderboard: any[] = []; // Empty array placeholder
 
   // Calculate platform statistics
+  // Temporarily disabled heat calculation - backend doesn't return heat data yet
+  /*
   const platformStats = useMemo(() => {
     if (!loadedTokens || loadedTokens.length === 0) {
       return { totalTokens: 0, totalHeat: 0 };
     }
 
     const totalHeat = loadedTokens.reduce((sum, token) => {
-      const heat = typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0;
+      const heat =
+        typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0;
       return sum + heat;
     }, 0);
 
@@ -264,11 +294,16 @@ export default function Explore() {
       totalHeat,
     };
   }, [loadedTokens]);
+  */
+  const platformStats = {
+    totalTokens: loadedTokens?.length || 0,
+    totalHeat: 0, // Backend doesn't provide heat data yet
+  };
 
   // Pagination handlers
   const handleNextPage = () => {
     if (pagination?.hasNextPage) {
-      const claimed = searchParams.get('claimed') || 'true';
+      const claimed = searchParams.get("claimed") || "true";
       setSearchParams({ page: String(pagination.currentPage + 1), claimed });
       window.scrollTo(0, 0);
     }
@@ -276,7 +311,7 @@ export default function Explore() {
 
   const handlePrevPage = () => {
     if (pagination?.hasPreviousPage) {
-      const claimed = searchParams.get('claimed') || 'true';
+      const claimed = searchParams.get("claimed") || "true";
       setSearchParams({ page: String(pagination.currentPage - 1), claimed });
       window.scrollTo(0, 0);
     }
@@ -293,7 +328,10 @@ export default function Explore() {
   return (
     <div className="min-h-screen w-full">
       <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 w-full">
-        <Intro totalTokens={platformStats.totalTokens} totalHeat={platformStats.totalHeat} />
+        <Intro
+          totalTokens={platformStats.totalTokens}
+          totalHeat={platformStats.totalHeat}
+        />
 
         {/* Tabs for switching between claimed and unclaimed tokens */}
         <div className="flex justify-between items-center border-b border-neutral-800">
@@ -308,7 +346,7 @@ export default function Explore() {
               }`}
             >
               <Grid3x3 className="w-4 h-4" />
-              Claimed {claimedCount > 0 ? `(${claimedCount})` : ''}
+              Claimed {claimedCount > 0 ? `(${claimedCount})` : ""}
             </button>
             <button
               onClick={() => setActiveTab("unclaimed")}
@@ -320,7 +358,7 @@ export default function Explore() {
               }`}
             >
               <Unlock className="w-4 h-4" />
-              Unclaimed {unclaimedCount > 0 ? `(${unclaimedCount})` : ''}
+              Unclaimed {unclaimedCount > 0 ? `(${unclaimedCount})` : ""}
             </button>
           </div>
 
@@ -378,17 +416,18 @@ export default function Explore() {
               </div>
             )}
 
-            <div className="flex flex-col xl:flex-row gap-4 md:gap-6 xl:gap-8 w-full">
-              {/* Tokens Grid */}
-              <div className="flex-1 min-w-0">
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 sm:gap-4 xl:gap-2">
-                  {/* Tokens List */}
-                  <MemeTokensList tokens={memeTokens} contractDataMap={contractDataMap} />
+            {/* Tokens Grid - spans full width now that leaderboard is commented out */}
+            <div className="w-full">
+              <MemeTokensList
+                tokens={memeTokens}
+                contractDataMap={contractDataMap}
+              />
 
-                  {/* Leaderboard - only for claimed tokens */}
-                  {activeTab === "claimed" && <Leaderboard items={leaderboard} />}
-                </div>
-              </div>
+              {/* Leaderboard - only for claimed tokens */}
+              {/* Temporarily disabled - backend doesn't return heat data yet */}
+              {/* {activeTab === "claimed" && (
+                <Leaderboard items={leaderboard} />
+              )} */}
             </div>
 
             {/* Pagination Controls */}
@@ -396,7 +435,10 @@ export default function Explore() {
               <div className="flex items-center justify-center gap-4 py-6">
                 <button
                   onClick={handlePrevPage}
-                  disabled={!pagination.hasPreviousPage || revalidator.state === "loading"}
+                  disabled={
+                    !pagination.hasPreviousPage ||
+                    revalidator.state === "loading"
+                  }
                   className="flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-700 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -409,7 +451,9 @@ export default function Explore() {
 
                 <button
                   onClick={handleNextPage}
-                  disabled={!pagination.hasNextPage || revalidator.state === "loading"}
+                  disabled={
+                    !pagination.hasNextPage || revalidator.state === "loading"
+                  }
                   className="flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-700 transition-colors"
                 >
                   Next

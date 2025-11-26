@@ -117,7 +117,7 @@ export default function CreatorDashboard() {
   const tokenName = selectedToken?.metadata?.name || "Token";
 
   // Parse creator data
-  const totalBalance = creatorData ? creatorData[1] : 0n;
+  const totalBalance = creatorData ? creatorData[1] + creatorData[2] : 0n;
   const unlockedBalance = creatorData ? creatorData[2] : 0n;
   const lockedBalance = totalBalance - unlockedBalance;
 
@@ -398,7 +398,9 @@ export default function CreatorDashboard() {
                   ) : (
                     <button
                       onClick={handleClaim}
-                      disabled={!canClaim || isClaimPending || isClaimConfirming}
+                      disabled={
+                        !canClaim || isClaimPending || isClaimConfirming
+                      }
                       className="w-full cursor-pointer bg-green-600 hover:bg-green-700 disabled:bg-neutral-800 disabled:border-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 text-gray-300 font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       {isClaimPending || isClaimConfirming ? (
@@ -411,9 +413,8 @@ export default function CreatorDashboard() {
                       ) : (
                         <>
                           <Coins className="w-4 h-4" />
-                          Claim {formatTokenAmount(
-                            formatEther(unlockedBalance)
-                          )}{" "}
+                          Claim{" "}
+                          {formatTokenAmount(formatEther(unlockedBalance))}{" "}
                           {tokenName}
                         </>
                       )}
