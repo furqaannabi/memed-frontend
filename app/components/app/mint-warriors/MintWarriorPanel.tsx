@@ -115,7 +115,7 @@ export default function MintWarriorPanel({
     if (isApproveConfirmed && flowState === "approving") {
       setFlowState("approved");
 
-      // Wait for allowance to update on blockchain
+      // Wait briefly for allowance to update on blockchain
       setTimeout(() => {
         refetchAllowance().then(() => {
           // Automatically trigger mint after approval
@@ -124,7 +124,7 @@ export default function MintWarriorPanel({
             setFlowState("minting");
           }
         });
-      }, 1000); // 1 second delay to ensure blockchain state is updated
+      }, 100); // 100ms delay - just enough for blockchain state update
     }
   }, [
     isApproveConfirmed,
@@ -169,15 +169,19 @@ export default function MintWarriorPanel({
   const handleMintClick = () => {
     if (!warriorNFTAddress || !currentPrice) return;
 
-    setFlowState("checking-allowance");
+    // Wait for allowance to load before proceeding
+    if (allowance === undefined) {
+      setFlowState("checking-allowance");
+      return; // Wait for allowance data to load from blockchain
+    }
 
-    // Check if we have enough allowance
-    if (allowance !== undefined && allowance >= currentPrice) {
-      // Sufficient allowance - mint directly
+    // Now we have allowance data, decide what to do
+    if (allowance >= currentPrice) {
+      // Sufficient allowance - mint directly without approval
       mintWarrior();
       setFlowState("minting");
     } else {
-      // Insufficient allowance - trigger approve first
+      // Insufficient allowance - request approval first
       approve(warriorNFTAddress, currentPrice);
       setFlowState("approving");
     }

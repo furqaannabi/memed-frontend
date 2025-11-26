@@ -112,14 +112,20 @@ export default function EngagementRewards() {
     useGetUserClaimableRewards(address, selectedTokenAddress);
 
   // Fetch warrior NFT address for selected token from factory (works for all tokens, not just launched)
-  const { data: nftAddressFromFactory } =
+  const { data: nftAddressFromFactory, isLoading: isLoadingNftAddress } =
     useGetWarriorNFT(selectedTokenAddress);
 
-  // Use NFT address from factory first, fallback to user.token data
-  const selectedNftAddress = nftAddressFromFactory as `0x${string}`;
+  // Validate NFT address - filter out zero address
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const selectedNftAddress =
+    nftAddressFromFactory &&
+    nftAddressFromFactory.toLowerCase() !== ZERO_ADDRESS
+      ? (nftAddressFromFactory as `0x${string}`)
+      : undefined;
 
+  // Only fetch active NFTs if we have a valid NFT address
   const { data: activeNFTs, isLoading: isLoadingNFTs } = useUserActiveNfts(
-    selectedNftAddress,
+    selectedNftAddress || (ZERO_ADDRESS as `0x${string}`),
     address
   );
 
@@ -571,15 +577,26 @@ export default function EngagementRewards() {
                 </h2>
               </div>
 
-              {!selectedNftAddress ? (
+              {!selectedTokenAddress ? (
                 <div className="text-center py-8 text-neutral-500 text-sm">
-                  {!selectedTokenAddress
-                    ? "Please select a token to view warrior status"
-                    : "Loading warrior NFT data..."}
+                  Please select a token to view warrior status
                 </div>
-              ) : isLoadingNFTs && !activeNFTs ? (
+              ) : isLoadingNftAddress || (isLoadingNFTs && !activeNFTs) ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+                  <span className="ml-2 text-neutral-400 text-sm">
+                    Loading warrior NFT data...
+                  </span>
+                </div>
+              ) : !selectedNftAddress ? (
+                <div className="text-center py-8">
+                  <Shield className="w-12 h-12 text-neutral-700 mx-auto mb-3" />
+                  <p className="text-neutral-400 text-sm mb-3">
+                    No Warrior NFT contract found for {tokenName}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    Warrior NFTs may not be deployed yet for this token.
+                  </p>
                 </div>
               ) : activeNFTs && activeNFTs.length > 0 ? (
                 <div className="space-y-4">

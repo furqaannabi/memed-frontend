@@ -69,6 +69,7 @@ export function useGetTokenData(tokenId: bigint) {
  * This calls the `getWarriorNFT` view function on the MemedFactory contract.
  * @param tokenAddress The address of the Memed token.
  * @returns The address of the Warrior NFT contract associated with the token.
+ * Refetches every 10 seconds to catch when Warrior NFT is deployed.
  */
 export function useGetWarriorNFT(tokenAddress: `0x${string}` | undefined) {
   return useReadContract({
@@ -78,6 +79,7 @@ export function useGetWarriorNFT(tokenAddress: `0x${string}` | undefined) {
     args: tokenAddress ? [tokenAddress] : undefined,
     query: {
       enabled: !!tokenAddress,
+      refetchInterval: 10000, // Refetch every 10 seconds to detect Warrior NFT deployment
     },
   });
 }

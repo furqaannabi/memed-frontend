@@ -70,9 +70,10 @@ export default function CreatorDashboard() {
   const { data: creatorTotalAllocation, isPending: isAllocationPending } =
     useGetCreatorAllocation();
 
-  // Refetch data after successful claim
+  // Refetch data after successful claim - immediate cache invalidation
   useEffect(() => {
     if (isClaimConfirmed) {
+      // Immediately refetch all creator-related data to update UI
       refetchCreatorData();
     }
   }, [isClaimConfirmed, refetchCreatorData]);
@@ -128,7 +129,8 @@ export default function CreatorDashboard() {
   const lockedBalance = creatorData ? creatorData[1] : 0n;
 
   // Check if can claim (unlocking happens automatically via factory contract)
-  const canClaim = unlockedBalance > 0n;
+  // Hide button immediately after claim is confirmed for better UX
+  const canClaim = unlockedBalance > 0n && !isClaimConfirmed;
 
   return (
     <div className="min-h-screen text-white">

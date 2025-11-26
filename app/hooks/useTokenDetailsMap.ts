@@ -156,32 +156,36 @@ export function useTokenDetailsMap(
             );
             const responseData = response.data as any;
 
+            // Backend wraps token in a 'token' field, extract it
+            const tokenData = responseData?.token || responseData;
+
             // Extract metadata if available
             if (
-              responseData &&
-              responseData.metadata &&
-              typeof responseData.metadata === "object" &&
+              tokenData &&
+              tokenData.metadata &&
+              typeof tokenData.metadata === "object" &&
               !signal.aborted
             ) {
-              const tokenMetadata = responseData.metadata as {
+              const tokenMetadata = tokenData.metadata as {
                 name?: string;
                 ticker?: string;
                 imageKey?: string;
               };
 
               if (enableDebugLogs) {
-                console.log(`Successfully fetched token ${address}:`, responseData);
+                console.log(`Successfully fetched token ${address}:`, tokenData);
               }
 
               newTokenDetailsMap[addressKey] = {
                 name:
                   tokenMetadata.name ||
                   `${address.slice(0, 6)}...${address.slice(-4)}`,
-                image: tokenMetadata.imageKey || "",
+                // Backend returns imageKey as full URL in metadata, use it directly
+                image: tokenMetadata.imageKey || tokenData.image?.s3Key || "",
                 // Add extended fields if requested
                 ...(includeExtendedFields && {
                   ticker: tokenMetadata.ticker || "???",
-                  address: responseData.address || (address as `0x${string}`),
+                  address: tokenData.address || (address as `0x${string}`),
                 }),
               };
             } else if (!signal.aborted) {
@@ -249,7 +253,8 @@ export function useTokenDetailsMap(
                     name:
                       tokenMetadata.name ||
                       `${address.slice(0, 6)}...${address.slice(-4)}`,
-                    image: tokenMetadata.imageKey || "",
+                    // Backend returns imageKey as full URL in metadata, use it directly
+                    image: tokenMetadata.imageKey || tokenData.image?.s3Key || "",
                     ticker: tokenMetadata.ticker || "???",
                     address: tokenData.address || (address as `0x${string}`),
                   };

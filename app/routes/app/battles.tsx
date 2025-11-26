@@ -1375,44 +1375,57 @@ export default function Battles() {
                       {/* Battle Footer */}
                       <div className="flex items-center justify-end pt-4 border-t border-neutral-800 gap-2">
                         <div className="flex gap-2">
-                          {/* Allocate NFTs button for active battles only */}
-                          {battle.status === 2 && address && (
-                            <div className="flex gap-1">
-                              {(() => {
-                                const memeADetails = getTokenDetails(
-                                  battle.memeA
-                                );
-                                const memeBDetails = getTokenDetails(
-                                  battle.memeB
-                                );
-                                return (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        handleOpenAllocation(battle, "memeA")
-                                      }
-                                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
-                                      title={`Support ${memeADetails.name}`}
-                                    >
-                                      Support {memeADetails.name}
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleOpenAllocation(battle, "memeB")
-                                      }
-                                      className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-2 rounded-lg transition-colors"
-                                      title={`Support ${memeBDetails.name}`}
-                                    >
-                                      Support {memeBDetails.name}
-                                    </button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          )}
+                          {/* Allocate NFTs button for active battles only (and time not expired) */}
+                          {battle.status === 2 &&
+                            address &&
+                            currentTime < Number(battle.endTime) && (
+                              <div className="flex gap-1">
+                                {(() => {
+                                  const memeADetails = getTokenDetails(
+                                    battle.memeA
+                                  );
+                                  const memeBDetails = getTokenDetails(
+                                    battle.memeB
+                                  );
+                                  return (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          handleOpenAllocation(battle, "memeA")
+                                        }
+                                        className="bg-green-700/80 hover:bg-green-600/90 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                        title={`Support ${memeADetails.name}`}
+                                      >
+                                        Support {memeADetails.name}
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleOpenAllocation(battle, "memeB")
+                                        }
+                                        className="bg-orange-700/80 hover:bg-orange-600/90 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                                        title={`Support ${memeBDetails.name}`}
+                                      >
+                                        Support {memeBDetails.name}
+                                      </button>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                          {/* Battle time expired but not yet resolved by contract */}
+                          {battle.status === 2 &&
+                            currentTime >= Number(battle.endTime) && (
+                              <div className="flex items-center gap-2 text-xs text-yellow-500 italic">
+                                <Clock className="w-3 h-3" />
+                                <span>Battle time expired - awaiting resolution</span>
+                              </div>
+                            )}
 
                           {/* Battle ended - show info message instead of support buttons */}
-                          {(battle.status === 3 || battle.status === 4 || battle.status === 5) && (
+                          {(battle.status === 3 ||
+                            battle.status === 4 ||
+                            battle.status === 5) && (
                             <div className="flex items-center gap-2 text-xs text-neutral-500 italic">
                               <Clock className="w-3 h-3" />
                               <span>Battle has ended</span>
@@ -2303,37 +2316,57 @@ export default function Battles() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                {detailsBattle.status === 2 && address && (
-                  <div className="flex gap-3">
-                    {(() => {
-                      const memeADetails = getTokenDetails(detailsBattle.memeA);
-                      const memeBDetails = getTokenDetails(detailsBattle.memeB);
-                      return (
-                        <>
-                          <button
-                            onClick={() => {
-                              setShowDetailsModal(false);
-                              handleOpenAllocation(detailsBattle, "memeA");
-                            }}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
-                          >
-                            Support {memeADetails.name}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowDetailsModal(false);
-                              handleOpenAllocation(detailsBattle, "memeB");
-                            }}
-                            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
-                          >
-                            Support {memeBDetails.name}
-                          </button>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
+                {/* Action Buttons - only show if battle is active and time not expired */}
+                {detailsBattle.status === 2 &&
+                  address &&
+                  currentTime < Number(detailsBattle.endTime) && (
+                    <div className="flex gap-3">
+                      {(() => {
+                        const memeADetails = getTokenDetails(
+                          detailsBattle.memeA
+                        );
+                        const memeBDetails = getTokenDetails(
+                          detailsBattle.memeB
+                        );
+                        return (
+                          <>
+                            <button
+                              onClick={() => {
+                                setShowDetailsModal(false);
+                                handleOpenAllocation(detailsBattle, "memeA");
+                              }}
+                              className="flex-1 bg-green-700/80 hover:bg-green-600/90 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                            >
+                              Support {memeADetails.name}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowDetailsModal(false);
+                                handleOpenAllocation(detailsBattle, "memeB");
+                              }}
+                              className="flex-1 bg-orange-700/80 hover:bg-orange-600/90 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                            >
+                              Support {memeBDetails.name}
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                {/* Battle time expired notice */}
+                {detailsBattle.status === 2 &&
+                  currentTime >= Number(detailsBattle.endTime) && (
+                    <div className="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 text-center">
+                      <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-400" />
+                      <p className="text-yellow-400 font-semibold text-lg">
+                        Battle Time Expired
+                      </p>
+                      <p className="text-sm text-neutral-300 mt-1">
+                        This battle has ended. Awaiting contract resolution.
+                      </p>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
