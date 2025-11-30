@@ -337,7 +337,7 @@ export function usePlatformStats(options?: UseApiOptions) {
  * @param page - Current page number (default: 1)
  * @param limit - Number of tokens per page (default: 20)
  */
-export function useLeaderboard(options?: UseApiOptions & {
+export function useTokensLeaderboard(options?: UseApiOptions & {
   page?: number;
   limit?: number;
 }) {

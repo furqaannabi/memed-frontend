@@ -17,7 +17,7 @@ import {
 import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/config";
-import { useLeaderboard } from "@/hooks/api/useMemedApi";
+import { useTokensLeaderboard } from "@/hooks/api/useMemedApi";
 
 // Export the loader for this route, following the project convention
 export { memeTokensLoader as loader };
@@ -238,7 +238,7 @@ export default function Explore() {
 
   // Fetch leaderboard data from backend (top 5 tokens by heat)
   // Only fetch when on "claimed" tab
-  const { data: leaderboardData } = useLeaderboard({
+  const { data: leaderboardData } = useTokensLeaderboard({
     page: 1,
     limit: 5,
     immediate: activeTab === "claimed",
