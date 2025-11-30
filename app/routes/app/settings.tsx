@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { User, Wallet, Check, Settings2, Link as LinkIcon, ExternalLink, Instagram } from "lucide-react";
+import { User, Wallet, Check, Settings2, Link as LinkIcon, ExternalLink, Instagram, RefreshCw } from "lucide-react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useAuthStore } from "@/store/auth";
 import { useNavigate } from "react-router";
 import { ConnectWalletPrompt } from "@/components/shared/ConnectWalletPrompt";
+import { useRefreshSocials } from "@/hooks/api/useAuth";
+import { toast } from "sonner";
 
 // Type definitions for better type safety
 interface SocialAccount {
@@ -17,6 +19,7 @@ export default function Settings() {
   const { address, chain } = useAccount();
   const { disconnect } = useDisconnect();
   const { user, isAuthenticated } = useAuthStore();
+  const { mutate: refreshSocials, loading: isRefreshing } = useRefreshSocials();
 
   // Memoize display name - derived from address, no need for state
   const displayName = useMemo(() => {
@@ -44,6 +47,19 @@ export default function Settings() {
   const handleDisconnect = () => {
     disconnect();
     navigate("/");
+  };
+
+  // Handle refreshing social accounts
+  const handleRefreshSocials = async () => {
+    try {
+      await refreshSocials();
+      toast.success("Social accounts refreshed successfully!");
+      // Refresh user session to get updated data
+      useAuthStore.getState().verifySession();
+    } catch (error) {
+      console.error("Failed to refresh socials:", error);
+      toast.error("Failed to refresh social accounts");
+    }
   };
 
   // Gate: Require wallet connection to view settings
@@ -137,9 +153,20 @@ export default function Settings() {
           <div className="space-y-6">
             {/* Linked Accounts Section */}
             <div className="bg-neutral-900 rounded-md p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <LinkIcon className="w-5 h-5 text-gray-400" />
-                <h2 className="text-xl font-semibold">Linked Accounts</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <LinkIcon className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-semibold">Linked Accounts</h2>
+                </div>
+                <button
+                  onClick={handleRefreshSocials}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh social accounts to validate access and update usernames"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </button>
               </div>
 
               <div className="space-y-4">

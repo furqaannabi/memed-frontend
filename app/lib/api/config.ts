@@ -319,6 +319,14 @@ export const API_ENDPOINTS = {
    */
   LEADERBOARD: "/api/leaderboard/:type",
 
+  /**
+   * GET /api/leaderboard
+   * Get tokens leaderboard sorted by heat score
+   * Query params: { page?, limit? }
+   * Returns: Paginated list of tokens with metadata, user, socials, ordered by heat DESC
+   */
+  LEADERBOARD_TOKENS: "/api/leaderboard",
+
   // ========================================================================
   // UPLOAD - File and metadata uploads
   // ========================================================================
@@ -384,6 +392,16 @@ export const API_ENDPOINTS = {
    * Validates: Only Business Instagram accounts accepted
    */
   CONNECT_INSTAGRAM: "/api/connect-instagram-auth",
+
+  /**
+   * POST /api/refresh-socials
+   * Validate and refresh linked social accounts
+   * Checks Instagram access tokens, updates usernames, marks accounts as active
+   * Body: none
+   * Returns: { message: string } - Success message
+   * Requires: Valid session
+   */
+  REFRESH_SOCIALS: "/api/refresh-socials",
 
   /**
    * POST /api/disconnect-wallet

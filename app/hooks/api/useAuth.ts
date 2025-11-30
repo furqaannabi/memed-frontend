@@ -135,6 +135,20 @@ export function useConnectSocial() {
   );
 }
 
+const REFRESH_SOCIALS_OPTIONS = { method: "POST" };
+
+/**
+ * Hook to refresh and validate linked social accounts
+ * Checks Instagram access tokens, updates usernames, marks accounts as active
+ * @returns Mutation object with mutate function, loading state, and error handling
+ */
+export function useRefreshSocials() {
+  return useApiMutation<{ message: string }, void>(
+    API_ENDPOINTS.REFRESH_SOCIALS,
+    REFRESH_SOCIALS_OPTIONS,
+  );
+}
+
 const DISCONNECT_WALLET_OPTIONS = { method: "POST" };
 
 /**

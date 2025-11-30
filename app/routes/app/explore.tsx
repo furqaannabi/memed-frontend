@@ -17,6 +17,7 @@ import {
 import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/config";
+import { useLeaderboard } from "@/hooks/api/useMemedApi";
 
 // Export the loader for this route, following the project convention
 export { memeTokensLoader as loader };
@@ -235,45 +236,41 @@ export default function Explore() {
     };
   });
 
-  // Create leaderboard from loaded tokens sorted by heat score
-  // Only show leaderboard on "claimed" tab
-  // Temporarily disabled - backend doesn't return heat data yet
-  /*
+  // Fetch leaderboard data from backend (top 5 tokens by heat)
+  // Only fetch when on "claimed" tab
+  const { data: leaderboardData } = useLeaderboard({
+    page: 1,
+    limit: 5,
+    immediate: activeTab === "claimed",
+  });
+
+  // Transform leaderboard data to component format
   const leaderboard = useMemo(() => {
-    if (!loadedTokens || loadedTokens.length === 0 || activeTab !== "claimed") {
+    if (!leaderboardData?.tokens || activeTab !== "claimed") {
       return [];
     }
 
-    return [...loadedTokens]
-      .filter((token) => token.heat !== undefined && token.heat !== null)
-      .sort((a, b) => {
-        const heatA = typeof a.heat === "bigint" ? Number(a.heat) : a.heat || 0;
-        const heatB = typeof b.heat === "bigint" ? Number(b.heat) : b.heat || 0;
-        return heatB - heatA;
-      })
-      .slice(0, 5)
-      .map((token, index) => ({
-        id: token.id || index + 1,
-        rank: index + 1,
-        name: token.metadata?.name || "Unnamed Token",
-        username: token.user?.socials?.[0]?.username
-          ? `@${token.user.socials[0].username}`
-          : token.user?.address
-          ? `@${token.user.address.slice(0, 6)}...`
-          : "@unknown",
-        image: token.metadata?.imageKey || meme,
-        score:
-          typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0,
-        engagement:
-          typeof token.heat === "bigint"
-            ? Number(token.heat) >= 1000
-              ? `${(Number(token.heat) / 1000).toFixed(1)}K`
-              : String(Number(token.heat))
-            : "0",
-      }));
-  }, [loadedTokens, activeTab]);
-  */
-  const leaderboard: any[] = []; // Empty array placeholder
+    return leaderboardData.tokens.map((token, index) => ({
+      id: token.id || index + 1,
+      rank: index + 1,
+      name: token.metadata?.name || "Unnamed Token",
+      username: token.user?.socials?.[0]?.username
+        ? `@${token.user.socials[0].username}`
+        : token.user?.address
+        ? `@${token.user.address.slice(0, 6)}...`
+        : "@unknown",
+      image: token.metadata?.imageKey || meme,
+      score: typeof token.heat === "bigint" ? Number(token.heat) : token.heat || 0,
+      engagement:
+        typeof token.heat === "bigint"
+          ? Number(token.heat) >= 1000
+            ? `${(Number(token.heat) / 1000).toFixed(1)}K`
+            : String(Number(token.heat))
+          : token.heat >= 1000
+          ? `${(token.heat / 1000).toFixed(1)}K`
+          : String(token.heat),
+    }));
+  }, [leaderboardData, activeTab]);
 
   // Calculate platform statistics
   // Temporarily disabled heat calculation - backend doesn't return heat data yet
@@ -416,18 +413,17 @@ export default function Explore() {
               </div>
             )}
 
-            {/* Tokens Grid - spans full width now that leaderboard is commented out */}
+            {/* Tokens Grid with Leaderboard */}
             <div className="w-full">
               <MemeTokensList
                 tokens={memeTokens}
                 contractDataMap={contractDataMap}
               />
 
-              {/* Leaderboard - only for claimed tokens */}
-              {/* Temporarily disabled - backend doesn't return heat data yet */}
-              {/* {activeTab === "claimed" && (
+              {/* Leaderboard - only for claimed tokens with heat data */}
+              {activeTab === "claimed" && leaderboard.length > 0 && (
                 <Leaderboard items={leaderboard} />
-              )} */}
+              )}
             </div>
 
             {/* Pagination Controls */}

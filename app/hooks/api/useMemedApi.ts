@@ -331,6 +331,62 @@ export function usePlatformStats(options?: UseApiOptions) {
   });
 }
 
+/**
+ * Get tokens leaderboard sorted by heat score
+ * Supports pagination with page and limit parameters
+ * @param page - Current page number (default: 1)
+ * @param limit - Number of tokens per page (default: 20)
+ */
+export function useLeaderboard(options?: UseApiOptions & {
+  page?: number;
+  limit?: number;
+}) {
+  const { page = 1, limit = 20, ...apiOptions } = options || {};
+
+  // Build query params for pagination
+  const queryParams = new URLSearchParams();
+  queryParams.append('page', String(page));
+  queryParams.append('limit', String(limit));
+
+  // Construct endpoint with query params
+  const endpoint = `/api/leaderboard?${queryParams}`;
+
+  return useApi<{
+    tokens: Array<{
+      id: string;
+      address: string;
+      heat: number | bigint;
+      metadata: {
+        name: string;
+        ticker: string;
+        imageKey: string;
+        description: string;
+      };
+      user: {
+        address: string;
+        socials: Array<{
+          type: string;
+          username: string;
+        }>;
+      };
+    }>;
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalCount: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }>(endpoint, {
+    cacheKey: `leaderboard-${page}-${limit}`,
+    cacheDuration: 2 * 60 * 1000, // 2 minutes
+    immediate: true,
+    deps: [page, limit],
+    ...apiOptions,
+  });
+}
+
 // User Profile Hooks
 export function useUserProfile(address: string, options?: UseApiOptions) {
   return useApi<{
