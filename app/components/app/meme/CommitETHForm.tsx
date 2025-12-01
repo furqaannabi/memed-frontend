@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CoinsIcon, TrendingDown, CheckCircle, AlertTriangle } from "lucide-react";
-import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
-import { useAccount, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther, formatEther } from "viem";
+import { useAccount, useBalance } from "wagmi";
 import { toast } from "sonner";
 import {
   usePricePerTokenWei,
@@ -13,31 +13,17 @@ import {
   useRaiseEth,
   useCalculateTokensForCommitment,
 } from "@/hooks/contracts/useMemedTokenSale";
-import {
-  usePaymentTokenBalance,
-  usePaymentTokenAllowance,
-  usePaymentTokenInfo,
-  useApprovePaymentToken,
-} from "@/hooks/contracts/usePaymentToken";
+import { useEthUsdPrice, useWeiToUsd } from "@/hooks/contracts/useChainlinkPriceFeed";
 
 /**
  * Flow states for the unified commit transaction flow
+ * Simplified from ERC20 flow - no approval needed for native ETH
  * - idle: Ready to start
- * - checking-allowance: Checking if approval is needed
- * - approving: Approval transaction in progress
- * - approved: Approval confirmed, about to commit
  * - committing: Commit transaction in progress
  * - completed: Commit successful
  * - error: Something went wrong
  */
-type FlowState =
-  | "idle"
-  | "checking-allowance"
-  | "approving"
-  | "approved"
-  | "committing"
-  | "completed"
-  | "error";
+type FlowState = "idle" | "committing" | "completed" | "error";
 
 /**
  * Format large numbers for display with proper decimal places and compact notation
@@ -90,12 +76,19 @@ interface CommitETHFormProps {
 }
 
 const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCommitSuccess }: CommitETHFormProps) => {
-  const [paymentAmount, setPaymentAmount] = useState("");
+  // ETH amount input (user enters ETH, not ERC20 tokens)
+  const [ethAmount, setEthAmount] = useState("");
 
-  // State machine to track the unified transaction flow
+  // State machine to track the unified transaction flow (simplified - no approval needed)
   const [flowState, setFlowState] = useState<FlowState>("idle");
 
   const { address } = useAccount();
+
+  // ETH Balance (replaces ERC20 token balance)
+  const { data: ethBalance } = useBalance({ address });
+
+  // Chainlink price feed for USD display
+  const { data: ethUsdPrice } = useEthUsdPrice();
 
   // Contract hooks
   const { data: pricePerTokenWei, isLoading: isLoadingPrice } =
@@ -125,26 +118,12 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   const totalCommitted = fairLaunchData ? fairLaunchData[2] : 0n;
   const isOversubscribed = totalCommitted > TARGET_ETH;
 
-  // Payment token hooks
-  const { data: tokenBalance } = usePaymentTokenBalance();
-  const { data: tokenAllowance, refetch: refetchAllowance } =
-    usePaymentTokenAllowance();
-  const { symbol: tokenSymbol, decimals: tokenDecimals } =
-    usePaymentTokenInfo();
-  const {
-    approveToken,
-    isPending: isApproving,
-    isConfirming: isConfirmingApproval,
-    isConfirmed: isApprovalConfirmed,
-    error: approvalError,
-  } = useApprovePaymentToken();
-
   // Debounce the input amount
-  const debouncedPaymentAmount = useDebounce(paymentAmount, 500);
+  const debouncedEthAmount = useDebounce(ethAmount, 500);
 
-  // Convert to bigint - using payment token decimals
-  const paymentTokenAmountAsBigInt = debouncedPaymentAmount
-    ? parseUnits(debouncedPaymentAmount as `${number}`, tokenDecimals || 18)
+  // Convert ETH input to Wei (18 decimals)
+  const ethAmountInWei = debouncedEthAmount
+    ? parseEther(debouncedEthAmount as `${number}`)
     : 0n;
 
   // Get user's current commitment
@@ -156,43 +135,15 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   // Accounts for oversubscription and refunds automatically
   const { data: calculationResult } = useCalculateTokensForCommitment(
     tokenId,
-    paymentTokenAmountAsBigInt
+    ethAmountInWei
   );
 
   // Extract tokens and refund amount from contract result
   // Only show calculated tokens if user has entered an amount
-  const calculatedTokens = paymentAmount && calculationResult?.[0]
+  const calculatedTokens = ethAmount && calculationResult?.[0]
     ? formatEther(calculationResult[0])
     : "";
-  const refundAmount = paymentAmount && calculationResult?.[1] ? calculationResult[1] : 0n;
-
-  // Auto-progress: After approval confirms, wait for allowance update then auto-commit
-  useEffect(() => {
-    if (isApprovalConfirmed && flowState === "approving") {
-      setFlowState("approved");
-
-      // Wait for allowance to update on blockchain
-      setTimeout(() => {
-        refetchAllowance().then(() => {
-          // Automatically trigger commit after approval
-          if (paymentTokenAmountAsBigInt > 0n) {
-            commitToFairLaunch({
-              launchId: tokenId,
-              amount: paymentTokenAmountAsBigInt,
-            });
-            setFlowState("committing");
-          }
-        });
-      }, 1000); // 1 second delay to ensure blockchain state is updated
-    }
-  }, [
-    isApprovalConfirmed,
-    flowState,
-    refetchAllowance,
-    commitToFairLaunch,
-    tokenId,
-    paymentTokenAmountAsBigInt,
-  ]);
+  const refundAmount = ethAmount && calculationResult?.[1] ? calculationResult[1] : 0n;
 
   // State for success message
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -203,7 +154,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       setFlowState("completed");
 
       // Clear form inputs
-      setPaymentAmount("");
+      setEthAmount("");
 
       // Show success message
       setShowSuccessMessage(true);
@@ -212,9 +163,6 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       const timer = setTimeout(() => {
         setShowSuccessMessage(false);
       }, 5000);
-
-      // Refresh data to show updated progress
-      refetchAllowance();
 
       // Notify parent component to refresh
       onCommitSuccess?.();
@@ -226,16 +174,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
 
       return () => clearTimeout(timer);
     }
-  }, [isCommitConfirmed, flowState, refetchAllowance, onCommitSuccess]);
-
-  // Handle approval errors - reset flow state and show error message
-  useEffect(() => {
-    if (approvalError && flowState === "approving") {
-      setFlowState("error");
-      toast.error("Approval failed. Please try again.");
-      console.error("Approval error:", approvalError);
-    }
-  }, [approvalError, flowState]);
+  }, [isCommitConfirmed, flowState, onCommitSuccess]);
 
   // Handle commit errors - reset flow state and show error message
   useEffect(() => {
@@ -247,33 +186,19 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   }, [commitError, flowState]);
 
   /**
-   * Unified commit handler - single click orchestrates entire flow
-   * 1. Checks allowance
-   * 2. If insufficient, triggers approve first
-   * 3. Auto-progresses to commit after approval (via useEffect)
-   * 4. If sufficient, commits directly
+   * Simplified commit handler - sends native ETH directly (no approval needed)
+   * Single-step process compared to ERC20's two-step approve + commit flow
    */
   const handleCommitClick = () => {
-    if (paymentTokenAmountAsBigInt === 0n) return;
+    if (ethAmountInWei === 0n) return;
 
-    setFlowState("checking-allowance");
+    setFlowState("committing");
 
-    // Check if we have enough allowance
-    if (
-      tokenAllowance !== undefined &&
-      tokenAllowance >= paymentTokenAmountAsBigInt
-    ) {
-      // Sufficient allowance - commit directly
-      commitToFairLaunch({
-        launchId: tokenId,
-        amount: paymentTokenAmountAsBigInt,
-      });
-      setFlowState("committing");
-    } else {
-      // Insufficient allowance - trigger approve first
-      approveToken(paymentTokenAmountAsBigInt);
-      setFlowState("approving");
-    }
+    // Send native ETH directly via value parameter
+    commitToFairLaunch({
+      launchId: tokenId,
+      value: ethAmountInWei, // ETH sent with transaction
+    });
   };
 
   const handleCancelCommit = () => {
@@ -285,23 +210,23 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
 
   // Calculate required amount - memoized to prevent recalculation on every render
   const requiredAmount = useMemo(
-    () => paymentTokenAmountAsBigInt,
-    [paymentTokenAmountAsBigInt]
+    () => ethAmountInWei,
+    [ethAmountInWei]
   );
 
-  // Check if user has enough balance - memoized for performance
+  // Check if user has enough ETH balance - memoized for performance
   const hasEnoughBalance = useMemo(
     () =>
-      tokenBalance && requiredAmount > 0n
-        ? tokenBalance >= requiredAmount
+      ethBalance && requiredAmount > 0n
+        ? ethBalance.value >= requiredAmount
         : false,
-    [tokenBalance, requiredAmount]
+    [ethBalance, requiredAmount]
   );
 
   // Validate commit input - memoized for performance
   const isCommitValid = useMemo(
-    () => paymentAmount && parseFloat(paymentAmount) > 0,
-    [paymentAmount]
+    () => ethAmount && parseFloat(ethAmount) > 0,
+    [ethAmount]
   );
 
   // Check if any transaction is in progress - memoized for performance
@@ -310,30 +235,20 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       isCommitting ||
       isConfirmingCommit ||
       isCancelling ||
-      isConfirmingCancel ||
-      isApproving ||
-      isConfirmingApproval,
+      isConfirmingCancel,
     [
       isCommitting,
       isConfirmingCommit,
       isCancelling,
       isConfirmingCancel,
-      isApproving,
-      isConfirmingApproval,
     ]
   );
 
   /**
-   * Get button text based on current flow state
+   * Get button text based on current flow state (simplified - no approval states)
    */
   const getCommitButtonText = () => {
     switch (flowState) {
-      case "checking-allowance":
-        return "Checking allowance...";
-      case "approving":
-        return "Approving...";
-      case "approved":
-        return "Approved! Committing...";
       case "committing":
         return "Committing...";
       case "completed":
@@ -350,17 +265,21 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
     !isCommitValid ||
     !address ||
     !hasEnoughBalance ||
-    flowState === "checking-allowance" ||
-    flowState === "approving" ||
-    flowState === "approved" ||
     flowState === "committing" ||
     flowState === "completed";
+
+  // Convert Wei amounts to USD for display
+  const inputUsdValue = useWeiToUsd(ethAmountInWei);
+  const balanceUsdValue = ethBalance ? useWeiToUsd(ethBalance.value) : null;
+  const commitmentUsdValue = userCommitment ? useWeiToUsd(userCommitment.amount) : null;
+  const refundUsdValue = useWeiToUsd(refundAmount);
+  const pricePerTokenUsd = pricePerTokenWei ? useWeiToUsd(pricePerTokenWei) : null;
+  const expectedRefundUsd = expectedClaim && expectedClaim[1] > 0n ? useWeiToUsd(expectedClaim[1]) : null;
 
   return (
     <div className="bg-neutral-900 p-6 rounded-xl w-full space-y-4">
       <h2 className="text-white text-lg font-semibold flex gap-2 items-center">
-        <CoinsIcon className="text-green-500" /> Commit{" "}
-        {tokenSymbol || "Tokens"}
+        <CoinsIcon className="text-green-500" /> Commit ETH
       </h2>
 
       {/* Success Message */}
@@ -370,9 +289,15 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
             ✅ Commitment Successful!
           </div>
           <div className="text-xs text-green-300">
-            Your {tokenSymbol || "TOKEN"} commitment has been confirmed. The
-            launch progress will update shortly.
+            Your ETH commitment has been confirmed. The launch progress will update shortly.
           </div>
+        </div>
+      )}
+
+      {/* Chainlink Price Staleness Warning */}
+      {ethUsdPrice?.isStale && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-2 rounded-md text-xs">
+          ⚠️ Price data may be outdated
         </div>
       )}
 
@@ -386,13 +311,15 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
             </div>
             <div className="space-y-1 text-xs text-neutral-300">
               <div className="font-medium">
-                {tokenSymbol || "Tokens"} Committed:{" "}
+                ETH Committed:{" "}
                 <span className="text-white">
-                  {formatTokenAmount(
-                    formatUnits(userCommitment.amount, tokenDecimals || 18)
-                  )}{" "}
-                  {tokenSymbol || "TOKEN"}
+                  {formatTokenAmount(formatEther(userCommitment.amount))} ETH
                 </span>
+                {commitmentUsdValue && (
+                  <span className="text-neutral-400 ml-2">
+                    ({commitmentUsdValue})
+                  </span>
+                )}
               </div>
               <div className="font-medium">
                 Expected Tokens:{" "}
@@ -405,9 +332,13 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
                 <div className="font-medium">
                   Expected Refund:{" "}
                   <span className="text-white">
-                    {formatTokenAmount(formatEther(expectedClaim[1]))}{" "}
-                    {tokenSymbol || "TOKEN"}
+                    {formatTokenAmount(formatEther(expectedClaim[1]))} ETH
                   </span>
+                  {expectedRefundUsd && (
+                    <span className="text-neutral-400 ml-2">
+                      ({expectedRefundUsd})
+                    </span>
+                  )}
                 </div>
               )}
               {userCommitment.claimed && (
@@ -437,15 +368,21 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       {/* Input Section */}
       <div>
         <label className="block text-sm text-neutral-400 mb-1">
-          {tokenSymbol || "TOKEN"} Amount to Commit
+          ETH Amount to Commit
         </label>
         <input
           type="number"
-          placeholder={`0.00 ${tokenSymbol || "TOKEN"}`}
-          value={paymentAmount}
-          onChange={(e) => setPaymentAmount(e.target.value)}
+          placeholder="0.00 ETH"
+          value={ethAmount}
+          onChange={(e) => setEthAmount(e.target.value)}
           className="w-full p-2 rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
+        {/* Real-time USD conversion below input */}
+        {ethAmount && inputUsdValue && (
+          <div className="text-xs text-neutral-400 mt-1">
+            ≈ {inputUsdValue}
+          </div>
+        )}
       </div>
 
       <div className="text-center text-2xl text-neutral-400">→</div>
@@ -480,8 +417,13 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
                 </div>
                 <div>
                   Refund amount: <span className="text-white font-medium">
-                    {formatTokenAmount(formatEther(refundAmount))} {tokenSymbol || "TOKEN"}
+                    {formatTokenAmount(formatEther(refundAmount))} ETH
                   </span>
+                  {refundUsdValue && (
+                    <span className="text-neutral-400 ml-2">
+                      ({refundUsdValue})
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-yellow-300/80 mt-1">
                   The target is 40 ETH. Your excess contribution will be refunded.
@@ -510,8 +452,13 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
                 {expectedClaim[1] > 0n && (
                   <div>
                     Potential refund: <span className="text-white font-medium">
-                      {formatTokenAmount(formatEther(expectedClaim[1]))} {tokenSymbol || "TOKEN"}
+                      {formatTokenAmount(formatEther(expectedClaim[1]))} ETH
                     </span>
+                    {expectedRefundUsd && (
+                      <span className="text-neutral-400 ml-2">
+                        ({expectedRefundUsd})
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="text-xs text-orange-300/80 mt-1">
@@ -523,31 +470,38 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
         </div>
       )}
 
-      {/* Balance Display - Formatted for better readability */}
-      {tokenBalance !== undefined && (
+      {/* Balance Display with USD value */}
+      {ethBalance !== undefined && (
         <div className="text-xs text-neutral-400 text-center">
-          Your Balance:{" "}
-          {formatTokenAmount(formatUnits(tokenBalance, tokenDecimals || 18))}{" "}
-          {tokenSymbol || "TOKEN"}
+          Balance: {formatTokenAmount(formatEther(ethBalance.value))} ETH
+          {balanceUsdValue && (
+            <span className="ml-2">
+              ({balanceUsdValue})
+            </span>
+          )}
         </div>
       )}
 
-      {/* Price Display - Formatted for better readability */}
-      {pricePerTokenWei && tokenSymbol && (
+      {/* Price Display with USD value */}
+      {pricePerTokenWei && (
         <div className="text-xs text-neutral-400 text-center">
-          Price: {formatTokenAmount(formatEther(pricePerTokenWei))}{" "}
-          {tokenSymbol} per {memeTokenSymbol || "MEME"} token
+          Price: {formatTokenAmount(formatEther(pricePerTokenWei))} ETH per {memeTokenSymbol || "MEME"} token
+          {pricePerTokenUsd && (
+            <span className="ml-2 text-neutral-500">
+              (≈ {pricePerTokenUsd} USD)
+            </span>
+          )}
         </div>
       )}
 
       {/* Insufficient Balance Warning */}
       {isCommitValid && !hasEnoughBalance && (
         <div className="bg-red-500/20 border border-red-600 text-red-300 text-sm p-2 rounded-md text-center">
-          Insufficient {tokenSymbol || "TOKEN"} balance
+          Insufficient ETH balance
         </div>
       )}
 
-      {/* Single Unified Commit Button */}
+      {/* Single Unified Commit Button (simplified - no approval step) */}
       <button
         onClick={() => {
           // Reset error state on retry
@@ -562,13 +516,12 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
         {!address ? "Connect Wallet" : getCommitButtonText()}
       </button>
 
-      {/* Warning Box */}
+      {/* Warning Box - Updated for ETH and simplified flow */}
       <div className="bg-yellow-500/20 border border-yellow-600 text-yellow-300 text-sm p-3 rounded-md">
         <div className="font-medium mb-1">⚠️ Fair Launch Commitment Info</div>
         <div className="text-xs text-yellow-300 space-y-1">
           <div>
-            • Commit {tokenSymbol || "TOKEN"} to get expected {memeTokenSymbol || "MEME"} tokens at fixed
-            price
+            • Commit ETH to get expected {memeTokenSymbol || "MEME"} tokens at fixed price
           </div>
           <div>
             • Your commitment is{" "}
@@ -577,8 +530,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
           </div>
           <div>• Tokens can be claimed once the fair launch reaches target</div>
           <div>
-            • Click once to commit - if needed, you'll be prompted to approve
-            first, then commitment happens automatically
+            • Native ETH is used - no token approval needed
           </div>
         </div>
       </div>

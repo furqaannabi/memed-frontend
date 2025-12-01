@@ -133,14 +133,15 @@ export function useCalculateTokensForCommitment(
 
 /**
  * Hook for the `commitToFairLaunch` write function.
- * This function takes _id and amount as parameters.
+ * Updated to send native ETH instead of ERC20 tokens.
+ * The contract function is now marked `payable` and accepts ETH via the `value` parameter.
  */
 export function useCommitToFairLaunch() {
   const { data: hash, error, isPending, writeContract } = useWriteContract();
 
   type CommitToFairLaunchArgs = {
     launchId: bigint;
-    amount: bigint;
+    value: bigint; // ETH amount in wei to send with transaction
   };
 
   const commitToFairLaunch = (args: CommitToFairLaunchArgs) => {
@@ -148,7 +149,8 @@ export function useCommitToFairLaunch() {
       address: TOKEN_SALE_ADDRESS,
       abi: memedTokenSaleAbi,
       functionName: "commitToFairLaunch",
-      args: [args.launchId, args.amount],
+      args: [args.launchId], // Only launchId - ETH sent via value parameter
+      value: args.value, // Native ETH sent with transaction
     });
   };
 

@@ -1,3 +1,25 @@
+/*
+ * ============================================================================
+ * LEGACY CODE - ERC20 Payment Token Hooks (Preserved for Reference)
+ * ============================================================================
+ *
+ * This file contains the original ERC20 token approval flow implementation.
+ * The fair launch system now uses native ETH instead (see useMemedTokenSale.ts).
+ *
+ * This code is preserved (commented out) for:
+ * - Future reference if ERC20 payment is needed again
+ * - Rollback capability if issues arise with ETH implementation
+ * - Documentation of the original approval-based flow
+ *
+ * To restore ERC20 functionality:
+ * 1. Uncomment this entire file
+ * 2. Revert useMemedTokenSale.ts commit function to use `amount` parameter
+ * 3. Revert CommitETHForm.tsx to previous version
+ *
+ * ============================================================================
+ */
+
+/*
 import {
   useAccount,
   useReadContract,
@@ -10,7 +32,7 @@ import { erc20Abi } from "@/abi/erc20";
 /**
  * Hook to get payment token balance
  * Polls every 5 seconds to keep balance up-to-date in real-time
- */
+ *\/
 export function usePaymentTokenBalance() {
   const { address } = useAccount();
 
@@ -29,7 +51,7 @@ export function usePaymentTokenBalance() {
 /**
  * Hook to get payment token allowance for the token sale contract
  * Polls every 3 seconds to quickly detect approval changes for smooth UI flow
- */
+ *\/
 export function usePaymentTokenAllowance() {
   const { address } = useAccount();
 
@@ -47,32 +69,32 @@ export function usePaymentTokenAllowance() {
 
 /**
  * Hook to get payment token info (name, symbol, decimals)
- */
+ *\/
 export function usePaymentTokenInfo() {
   const { data: name } = useReadContract({
     address: PAYMENT_TOKEN_ADDRESS,
     abi: erc20Abi,
     functionName: "name",
   });
-  
+
   const { data: symbol } = useReadContract({
     address: PAYMENT_TOKEN_ADDRESS,
     abi: erc20Abi,
     functionName: "symbol",
   });
-  
+
   const { data: decimals } = useReadContract({
     address: PAYMENT_TOKEN_ADDRESS,
     abi: erc20Abi,
     functionName: "decimals",
   });
-  
+
   return { name, symbol, decimals };
 }
 
 /**
  * Hook to approve payment token spending
- */
+ *\/
 export function useApprovePaymentToken() {
   const { data: hash, error, isPending, writeContract } = useWriteContract();
 
@@ -99,3 +121,4 @@ export function useApprovePaymentToken() {
     error,
   };
 }
+*/

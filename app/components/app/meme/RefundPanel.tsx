@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { RefreshCcw, CheckCircle } from "lucide-react";
-import { formatUnits } from "viem";
+import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import {
   useRefund,
@@ -8,7 +8,7 @@ import {
   useFairLaunchData,
   useRaiseEth,
 } from "@/hooks/contracts/useMemedTokenSale";
-import { usePaymentTokenInfo } from "@/hooks/contracts/usePaymentToken";
+import { useWeiToUsd } from "@/hooks/contracts/useChainlinkPriceFeed";
 
 /**
  * Format large numbers for display with proper decimal places and compact notation
@@ -45,13 +45,11 @@ interface RefundPanelProps {
  * RefundPanel Component
  *
  * Displays refund functionality for failed launches (status 4).
- * Shows user's committed amount and allows them to get their refund.
+ * Shows user's committed ETH amount and allows them to get their refund.
+ * Updated to use native ETH instead of ERC20 payment token.
  */
 const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
   const { address } = useAccount();
-
-  // Get payment token info
-  const { symbol: tokenSymbol, decimals: tokenDecimals } = usePaymentTokenInfo();
 
   // Get user's commitment data
   const { data: userCommitment, isLoading: isLoadingCommitment } =
@@ -110,6 +108,9 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
 
   const isTransacting = isRefunding || isConfirmingRefund;
 
+  // Get USD value for refund amount
+  const refundUsdValue = userCommitment ? useWeiToUsd(userCommitment.amount) : null;
+
   return (
     <div className="bg-neutral-900 p-6 rounded-xl w-full space-y-4">
       <h2 className="text-white text-lg font-semibold flex gap-2 items-center">
@@ -140,9 +141,9 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
               <span className="font-semibold">Reason:</span> Target not reached
               <br />
               <span className="text-xs">
-                Raised: {formatTokenAmount(formatUnits(totalCommitted, 18))} ETH
+                Raised: {formatTokenAmount(formatEther(totalCommitted))} ETH
                 {" / "}
-                Target: {formatTokenAmount(formatUnits(raiseTarget, 18))} ETH
+                Target: {formatTokenAmount(formatEther(raiseTarget))} ETH
               </span>
             </div>
           ) : (
@@ -165,7 +166,7 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
             ✅ Refund Successful!
           </div>
           <div className="text-xs text-green-300">
-            Your {tokenSymbol || "tokens"} have been returned to your wallet.
+            Your ETH has been returned to your wallet.
           </div>
         </div>
       )}
@@ -180,8 +181,13 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
           <div className="text-xs text-neutral-300">
             You successfully received a refund of{" "}
             <span className="text-white font-medium">
-              {formatTokenAmount(formatUnits(userCommitment.amount, tokenDecimals || 18))} {tokenSymbol || "TOKEN"}
-            </span>. Check your wallet!
+              {formatTokenAmount(formatEther(userCommitment.amount))} ETH
+            </span>
+            {refundUsdValue && (
+              <span className="text-neutral-400 ml-1">
+                ({refundUsdValue})
+              </span>
+            )}. Check your wallet!
           </div>
         </div>
       )}
@@ -207,9 +213,14 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
               <div className="flex justify-between items-center">
                 <span className="text-xs text-neutral-400">You will receive:</span>
                 <span className="text-white font-bold text-lg">
-                  {formatTokenAmount(formatUnits(userCommitment.amount, tokenDecimals || 18))} {tokenSymbol || "TOKEN"}
+                  {formatTokenAmount(formatEther(userCommitment.amount))} ETH
                 </span>
               </div>
+              {refundUsdValue && (
+                <div className="text-xs text-neutral-400 text-right">
+                  ≈ {refundUsdValue}
+                </div>
+              )}
             </div>
             <div className="text-xs text-neutral-400 mt-2">
               This is the full amount you committed to the launch.
@@ -227,15 +238,15 @@ const RefundPanel = ({ tokenId, tokenName = "Token" }: RefundPanelProps) => {
               ? "Processing Refund..."
               : !address
               ? "Connect Wallet"
-              : `Claim Refund (${formatTokenAmount(formatUnits(userCommitment.amount, tokenDecimals || 18))} ${tokenSymbol || "TOKEN"})`}
+              : `Claim Refund (${formatTokenAmount(formatEther(userCommitment.amount))} ETH)`}
           </button>
 
           {/* Info Box */}
           <div className="bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm p-3 rounded-md">
             <div className="font-medium mb-1">ℹ️ Refund Info</div>
             <div className="text-xs text-neutral-400 space-y-1">
-              <div>• You'll receive 100% of your committed {tokenSymbol || "tokens"}</div>
-              <div>• {tokenSymbol || "Tokens"} will be transferred directly to your wallet</div>
+              <div>• You'll receive 100% of your committed ETH</div>
+              <div>• ETH will be transferred directly to your wallet</div>
               <div>• This is a one-time action - you can only claim refund once</div>
             </div>
           </div>

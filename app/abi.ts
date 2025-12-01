@@ -5,3 +5,4 @@ export * from "./abi/memedEngageToEarn";
 export * from "./abi/memedTokenSale";
 export * from "./abi/memedToken";
 export * from "./abi/memedWarriorNFT";
+export * from "./abi/chainlinkPriceFeed";
