@@ -412,6 +412,19 @@ export const API_ENDPOINTS = {
    */
   DISCONNECT_WALLET: "/api/disconnect-wallet",
 
+  /**
+   * DELETE /api/delete-account
+   * Permanently delete user account and all platform data
+   * Body: none
+   * Returns: { message: string } - Success message
+   * Requires: Valid session
+   * Eligibility: User has not started Fair Launch OR Fair Launch failed (status 4)
+   * Deletes: Account info, username, email, social links, activity data, meme uploads
+   * Preserves: Blockchain data (tokens, transactions, NFTs) - cannot be deleted
+   * Warning: This action is permanent and cannot be undone
+   */
+  DELETE_ACCOUNT: "/api/delete-account",
+
   // ========================================================================
   // ADMIN - Admin-only endpoints
   // ========================================================================

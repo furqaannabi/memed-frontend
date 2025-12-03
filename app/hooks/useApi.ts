@@ -447,7 +447,27 @@ export function useApiMutation<TData = any, TVariables = any>(
     }));
 
     try {
-      const response = await apiClient.post<TData>(endpoint, variables, requestConfig);
+      // Determine HTTP method from config (default to POST for backwards compatibility)
+      const method = (requestConfig as any).method?.toUpperCase() || 'POST';
+
+      let response: ApiResponse<TData>;
+
+      // Call appropriate HTTP method based on config
+      switch (method) {
+        case 'DELETE':
+          response = await apiClient.delete<TData>(endpoint, requestConfig);
+          break;
+        case 'PUT':
+          response = await apiClient.put<TData>(endpoint, variables, requestConfig);
+          break;
+        case 'PATCH':
+          response = await apiClient.patch<TData>(endpoint, variables, requestConfig);
+          break;
+        case 'POST':
+        default:
+          response = await apiClient.post<TData>(endpoint, variables, requestConfig);
+          break;
+      }
 
       setState({
         data: response.data,
@@ -464,7 +484,7 @@ export function useApiMutation<TData = any, TVariables = any>(
 
     } catch (error) {
       const apiError = error as Error;
-      
+
       setState({
         data: null,
         loading: false,

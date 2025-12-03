@@ -1,11 +1,13 @@
-import { useMemo } from "react";
-import { User, Wallet, Check, Settings2, Link as LinkIcon, ExternalLink, Instagram, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { User, Wallet, Check, Settings2, Link as LinkIcon, ExternalLink, Instagram, RefreshCw, AlertTriangle } from "lucide-react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useAuthStore } from "@/store/auth";
 import { useNavigate } from "react-router";
 import { ConnectWalletPrompt } from "@/components/shared/ConnectWalletPrompt";
-import { useRefreshSocials } from "@/hooks/api/useAuth";
+import { useRefreshSocials, useDeleteAccount } from "@/hooks/api/useAuth";
+import { useFairLaunchData } from "@/hooks/contracts/useMemedTokenSale";
 import { toast } from "sonner";
+import DeleteAccountModal from "@/components/shared/DeleteAccountModal";
 
 // Type definitions for better type safety
 interface SocialAccount {
@@ -20,6 +22,10 @@ export default function Settings() {
   const { disconnect } = useDisconnect();
   const { user, isAuthenticated } = useAuthStore();
   const { mutate: refreshSocials, loading: isRefreshing } = useRefreshSocials();
+  const { mutate: deleteAccount, loading: isDeleting } = useDeleteAccount();
+
+  // State for delete account modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Memoize display name - derived from address, no need for state
   const displayName = useMemo(() => {
@@ -42,6 +48,50 @@ export default function Settings() {
     [user?.socials]
   );
 
+  // Get user's first token to check Fair Launch status
+  // User can only delete account if they have NO tokens OR their Fair Launch failed (status 4)
+  const userToken = user?.token?.[0];
+  const fairLaunchId = userToken?.fairLaunchId ? BigInt(userToken.fairLaunchId) : undefined;
+
+  // Fetch Fair Launch data for eligibility check
+  const { data: fairLaunchData } = useFairLaunchData(fairLaunchId || 0n);
+
+  // Check if user can delete account based on Fair Launch status
+  // Fair Launch statuses: 0=Active, 1=Ready, 2=Pending, 3=Succeeded, 4=Failed
+  const canDeleteAccount = useMemo(() => {
+    // If user has no tokens, they can delete
+    if (!userToken || !fairLaunchId) return true;
+
+    // If Fair Launch data not loaded yet, don't allow deletion (safety first)
+    if (!fairLaunchData) return false;
+
+    // Check Fair Launch status (status is at index 0 of the tuple)
+    const status = Number(fairLaunchData[0]);
+
+    // Can delete if Fair Launch FAILED (status 4)
+    // Cannot delete if Fair Launch is Active (0), Ready (1), Pending (2), or Succeeded (3)
+    return status === 4;
+  }, [userToken, fairLaunchId, fairLaunchData]);
+
+  // Get reason why user cannot delete (for UI display)
+  const deleteBlockedReason = useMemo(() => {
+    if (canDeleteAccount) return null;
+
+    if (!fairLaunchData) return "Loading Fair Launch status...";
+
+    const status = Number(fairLaunchData[0]);
+
+    if (status === 3) {
+      return "Your Fair Launch completed successfully. Connected social accounts are needed for on-chain heat scores and rewards.";
+    }
+
+    if (status === 0 || status === 1 || status === 2) {
+      return "Your Fair Launch is currently active. Please wait for it to complete or fail before deleting your account.";
+    }
+
+    return "Account deletion not available at this time.";
+  }, [canDeleteAccount, fairLaunchData]);
+
   // When disconnecting from Settings page, always redirect to home
   // Settings requires authentication, so user can't stay here after disconnect
   const handleDisconnect = () => {
@@ -59,6 +109,37 @@ export default function Settings() {
     } catch (error) {
       console.error("Failed to refresh socials:", error);
       toast.error("Failed to refresh social accounts");
+    }
+  };
+
+  // Handle account deletion
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+      toast.success("Account deleted successfully");
+
+      // Close modal
+      setShowDeleteModal(false);
+
+      // Clear auth state
+      // Note: Backend already destroys session in delete-account endpoint
+      useAuthStore.setState({ user: null, isAuthenticated: false });
+
+      // Disconnect wallet
+      disconnect();
+
+      // Redirect to home
+      setTimeout(() => {
+        navigate("/");
+      }, 500); // Small delay to ensure cleanup completes
+
+    } catch (error: any) {
+      console.error("Failed to delete account:", error);
+      const errorMessage =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to delete account";
+      toast.error(errorMessage);
     }
   };
 
@@ -382,6 +463,88 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Danger Zone - Account Deletion */}
+        <div className="mt-8 bg-neutral-900 rounded-md p-6 border border-red-500/30">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <h2 className="text-xl font-semibold text-red-500">Danger Zone</h2>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-300">
+              Permanently delete your account and all associated platform data.
+              This action cannot be undone.
+            </p>
+
+            {/* Eligibility Info */}
+            {!canDeleteAccount && deleteBlockedReason && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <p className="text-sm text-yellow-400 font-medium mb-2">
+                  ⚠️ Account Deletion Not Available
+                </p>
+                <p className="text-xs text-neutral-300">{deleteBlockedReason}</p>
+                <p className="text-xs text-neutral-400 mt-2">
+                  Learn more about deletion eligibility in our{" "}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    className="text-yellow-400 hover:text-yellow-300 underline"
+                  >
+                    Terms & Conditions
+                  </a>
+                </p>
+              </div>
+            )}
+
+            {/* Eligibility Success */}
+            {canDeleteAccount && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                <p className="text-sm text-green-400 font-medium mb-2">
+                  ✓ Your Account Is Eligible For Deletion
+                </p>
+                <p className="text-xs text-neutral-300">
+                  You can proceed with account deletion. All platform data will
+                  be permanently removed.
+                </p>
+              </div>
+            )}
+
+            {/* What Gets Deleted Notice */}
+            <div className="bg-neutral-800 rounded-lg p-4 text-xs text-neutral-400 space-y-2">
+              <div>
+                <span className="font-medium text-neutral-300">
+                  Will be deleted:
+                </span>{" "}
+                Account info, social links, meme uploads, activity logs
+              </div>
+              <div>
+                <span className="font-medium text-neutral-300">
+                  Cannot be deleted:
+                </span>{" "}
+                Blockchain data (tokens, transactions, NFTs) remains on-chain
+                permanently
+              </div>
+            </div>
+
+            {/* Delete Button */}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={!canDeleteAccount}
+              className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              Delete Account Permanently
+            </button>
+          </div>
+        </div>
+
+        {/* Delete Account Confirmation Modal */}
+        <DeleteAccountModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteAccount}
+          isDeleting={isDeleting}
+        />
       </div>
     </div>
   );

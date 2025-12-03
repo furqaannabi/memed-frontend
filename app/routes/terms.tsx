@@ -3,6 +3,13 @@ import { Header } from "@/components/home/Header";
 import { MobileMenu } from "@/components/home/MobileMenu";
 import { Footer } from "@/components/home/Footer";
 
+// Import delete account step screenshots
+import step1 from "@/assets/images/step1.png";
+import step2 from "@/assets/images/step2.png";
+import step3 from "@/assets/images/step3.png";
+import step4 from "@/assets/images/step4.png";
+import step5 from "@/assets/images/step5.png";
+
 export default function Terms() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -188,16 +195,99 @@ export default function Terms() {
           <p className="text-gray-300 mb-6">Only blockchain data remains because it is irreversible by design.</p>
 
           <h2 className="text-2xl font-semibold text-green-400 mb-4">5. How to Delete Your Account</h2>
-          <p className="text-gray-300 mb-4">You can delete your account in two ways:</p>
+          <p className="text-gray-300 mb-6">You can delete your account in two ways:</p>
 
-          <h3 className="text-xl font-medium text-green-300 mb-2">a. Self-Service</h3>
-          <p className="text-gray-300 mb-4">Go to your Profile → Delete Account. If eligible, your account and data will be erased instantly.</p>
+          <h3 className="text-xl font-medium text-green-300 mb-3">a. Self-Service Deletion (Recommended)</h3>
+          <p className="text-gray-300 mb-4">Follow these steps to delete your account from the Settings page:</p>
 
-          <h3 className="text-xl font-medium text-green-300 mb-2">b. Manual Request</h3>
+          {/* Step-by-step guide with screenshot placeholders */}
+          <div className="space-y-6 mb-8">
+            {/* Step 1 */}
+            <div className="bg-neutral-800 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Step 1: Navigate to Settings</h4>
+              <p className="text-gray-300 text-sm mb-3">
+                Click on your profile icon in the top right corner, then select <strong>"Settings"</strong> from the dropdown menu.
+              </p>
+              <img
+                src={step1}
+                alt="Navigate to Settings - Click profile icon and select Settings from dropdown"
+                className="w-full rounded-lg border border-neutral-700 shadow-lg"
+              />
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-neutral-800 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Step 2: Scroll to Danger Zone</h4>
+              <p className="text-gray-300 text-sm mb-3">
+                Scroll down to the bottom of the Settings page. You'll see a red-bordered section called <strong>"Danger Zone"</strong> with account deletion options.
+              </p>
+              <img
+                src={step2}
+                alt="Danger Zone section at bottom of Settings page"
+                className="w-full rounded-lg border border-neutral-700 shadow-lg"
+              />
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-neutral-800 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Step 3: Check Eligibility</h4>
+              <p className="text-gray-300 text-sm mb-3">
+                The Danger Zone will show if you're eligible to delete your account:
+              </p>
+              <ul className="text-gray-300 text-sm list-disc list-inside mb-3 space-y-1">
+                <li><span className="text-green-400">✓ Green message</span> = You can delete (no Fair Launch or Fair Launch failed)</li>
+                <li><span className="text-yellow-400">⚠️ Yellow warning</span> = Cannot delete (Fair Launch active or completed)</li>
+              </ul>
+              <img
+                src={step3}
+                alt="Eligibility status showing green eligible message or yellow warning"
+                className="w-full rounded-lg border border-neutral-700 shadow-lg"
+              />
+            </div>
+
+            {/* Step 4 */}
+            <div className="bg-neutral-800 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Step 4: Click "Delete Account Permanently"</h4>
+              <p className="text-gray-300 text-sm mb-3">
+                If eligible, click the red <strong>"Delete Account Permanently"</strong> button. A confirmation modal will appear with detailed warnings.
+              </p>
+              <img
+                src={step4}
+                alt="Red Delete Account Permanently button"
+                className="w-full rounded-lg border border-neutral-700 shadow-lg"
+              />
+            </div>
+
+            {/* Step 5 */}
+            <div className="bg-neutral-800 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Step 5: Confirm Deletion</h4>
+              <p className="text-gray-300 text-sm mb-3">
+                In the confirmation modal, you must:
+              </p>
+              <ol className="text-gray-300 text-sm list-decimal list-inside mb-3 space-y-1 ml-4">
+                <li>Check the box acknowledging blockchain data cannot be deleted</li>
+                <li>Type <strong className="text-red-400">DELETE</strong> in the input field</li>
+                <li>Click <strong>"Delete Account Permanently"</strong></li>
+              </ol>
+              <img
+                src={step5}
+                alt="Confirmation modal with warnings and DELETE input field"
+                className="w-full rounded-lg border border-neutral-700 shadow-lg"
+              />
+              <p className="text-gray-300 text-xs mt-3 italic">
+                After confirmation, your account will be permanently deleted. You'll be logged out and redirected to the home page.
+              </p>
+            </div>
+          </div>
+
+          <h3 className="text-xl font-medium text-green-300 mb-3">b. Manual Request</h3>
           <p className="text-gray-300 mb-6">
-            Email: <a href="mailto:support@memed.fun" className="text-green-400 hover:text-green-300">support@memed.fun</a><br />
-            Subject: Account Deletion Request<br />
-            We will verify your eligibility based on your Fair Launch status and process the deletion.
+            If you cannot access your account or need assistance:<br />
+            <strong>Email:</strong> <a href="mailto:support@memed.fun" className="text-green-400 hover:text-green-300">support@memed.fun</a><br />
+            <strong>Subject:</strong> Account Deletion Request<br />
+            <strong>Include:</strong> Your wallet address and reason for deletion<br />
+            <br />
+            We will verify your eligibility based on your Fair Launch status and process the deletion within 48 hours.
           </p>
         </div>
         </div>

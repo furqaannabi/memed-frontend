@@ -163,3 +163,39 @@ export function useDisconnectWallet(
     { ...DISCONNECT_WALLET_OPTIONS, ...options },
   );
 }
+
+const DELETE_ACCOUNT_OPTIONS = { method: "DELETE" };
+
+/**
+ * Hook to permanently delete user account and all platform data
+ *
+ * Eligibility Requirements:
+ * - User has NOT started a Fair Launch, OR
+ * - User's Fair Launch has FAILED (status 4)
+ *
+ * What Gets Deleted:
+ * - Account information & credentials
+ * - Username, email, profile details
+ * - Linked social accounts (Lens, Twitter, Instagram)
+ * - Social access tokens
+ * - Meme uploads & platform interactions
+ * - Analytics & session logs
+ *
+ * What CANNOT Be Deleted (Blockchain Data):
+ * - Tokens earned/received
+ * - On-chain transactions
+ * - Trade history
+ * - NFT mint/burn events
+ * - Rewards tied to wallet
+ *
+ * @returns Mutation object with mutate function, loading state, and error handling
+ * @throws Error if user is not eligible to delete account (active/completed Fair Launch)
+ */
+export function useDeleteAccount(
+  options: Omit<UseApiOptions, "immediate" | "deps"> = {},
+) {
+  return useApiMutation<{ message: string }, void>(
+    API_ENDPOINTS.DELETE_ACCOUNT,
+    { ...DELETE_ACCOUNT_OPTIONS, ...options },
+  );
+}
