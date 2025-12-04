@@ -271,6 +271,16 @@ export const API_ENDPOINTS = {
    */
   LENS_UPDATE: "/api/lens/engagement/update",
 
+  /**
+   * GET /api/engagement/:token
+   * Get multi-platform social engagement metrics for a token
+   * Path params: { token: tokenAddress }
+   * Returns: { engagements: Array<{ type: "LENS" | "INSTAGRAM", engagement: object }> }
+   * Platforms: LENS (likes, mirrors, comments, collects, score), INSTAGRAM (impressions, reach, likes, comments, shares, saves)
+   * Note: Only returns data for connected social accounts of token creator
+   */
+  TOKEN_ENGAGEMENT: "/api/engagement/:token",
+
   // ========================================================================
   // ANALYTICS - Platform and token statistics
   // ========================================================================

@@ -121,6 +121,39 @@ export interface LensEngagement {
   lastUpdated: string;
 }
 
+/**
+ * Lens engagement metrics returned from Lens Protocol API
+ * These metrics represent social interactions on Lens posts
+ */
+export interface LensEngagementMetrics {
+  reactions: number; // Total reactions (likes) on Lens posts
+  comments: number; // Total comments on Lens posts
+  reposts: number; // Total reposts (mirrors) on Lens posts
+}
+
+/**
+ * Instagram engagement score
+ * Single numeric value representing total Instagram engagement
+ */
+export type InstagramEngagementScore = number;
+
+/**
+ * Multi-platform engagement data structure
+ * Contains engagement metrics from different social platforms
+ */
+export interface PlatformEngagement {
+  type: "LENS" | "INSTAGRAM"; // Social platform type
+  engagement: LensEngagementMetrics | InstagramEngagementScore; // Platform-specific engagement data
+}
+
+/**
+ * Token engagement response structure
+ * Returns engagement data from all connected social platforms for a token creator
+ */
+export interface TokenEngagementResponse {
+  engagements: PlatformEngagement[]; // Array of platform-specific engagement data
+}
+
 // Meme Token Hooks
 // Updated to support new backend pagination and filtering
 export function useMemeTokens(options?: UseApiOptions & {
@@ -288,6 +321,42 @@ export function useConnectInstagram() {
     { message: string },
     { code: string }
   >("/api/connect-instagram-auth");
+}
+
+/**
+ * Fetch multi-platform social engagement metrics for a token
+ *
+ * This hook fetches engagement data from all connected social platforms
+ * (LENS and INSTAGRAM) for the token creator's accounts.
+ *
+ * @param tokenAddress - The token contract address (e.g., "0x123...")
+ * @param options - Additional API options (caching, callbacks, etc.)
+ * @returns Engagement data grouped by platform type
+ *
+ * @example
+ * ```tsx
+ * const { data, loading, error } = useTokenEngagement(token.address);
+ *
+ * // data.engagements = [
+ * //   { type: "LENS", engagement: { likes: 100, mirrors: 50, ... } },
+ * //   { type: "INSTAGRAM", engagement: { impressions: 5000, reach: 3000, ... } }
+ * // ]
+ * ```
+ */
+export function useTokenEngagement(
+  tokenAddress: string | undefined,
+  options?: UseApiOptions
+) {
+  return useApi<TokenEngagementResponse>(
+    API_ENDPOINTS.TOKEN_ENGAGEMENT.replace(":token", tokenAddress || ""),
+    {
+      cacheKey: `token-engagement-${tokenAddress}`,
+      cacheDuration: 5 * 60 * 1000, // 5 minutes - engagement data updates periodically
+      immediate: !!tokenAddress, // Only fetch if token address is provided
+      deps: [tokenAddress],
+      ...options,
+    }
+  );
 }
 
 // Analytics Hooks
