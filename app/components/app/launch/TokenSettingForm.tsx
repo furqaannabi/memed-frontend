@@ -171,7 +171,7 @@ export default function TokenSettingForm({
                     <div className="w-2 h-2 mt-1.5 bg-primary rounded-full mr-2"></div>
                     <p className="text-gray-400 text-sm">
                       <span className="font-medium text-white">Trading:</span>{" "}
-                      Your token will be tradable on decentralized exchanges.
+                      Your token will be tradable on Uniswap.
                     </p>
                   </div>
                   <div className="flex items-start">
@@ -188,7 +188,7 @@ export default function TokenSettingForm({
                     <div className="w-2 h-2 mt-1.5 bg-primary rounded-full mr-2"></div>
                     <p className="text-gray-400 text-sm">
                       <span className="font-medium text-white">Network:</span>{" "}
-                      Your token will be deployed on the Lens network.
+                      Your token will be deployed on the Base network.
                     </p>
                   </div>
                 </div>

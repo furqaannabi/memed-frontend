@@ -21,7 +21,8 @@ export default function LaunchPage() {
   const { isAuthenticated } = useAuthStore();
 
   // Check if user is allowed to mint/launch tokens
-  const { data: isMintable, isLoading: isMintableLoading } = useIsMintable(address);
+  const { data: isMintable, isLoading: isMintableLoading } =
+    useIsMintable(address);
 
   // State for the multi-step form
   const [step, setStep] = useState(1);
@@ -106,10 +107,13 @@ export default function LaunchPage() {
       };
 
       // 5. Call the API directly using apiClient
-      const result = await apiClient.post<{ fairLaunchId?: number; address?: string }>(
+      const result = await apiClient.post<{
+        fairLaunchId?: number;
+        address?: string;
+      }>(
         API_ENDPOINTS.CREATE_TOKEN,
         formData,
-        { headers }, // 60s timeout, no retries
+        { headers } // 60s timeout, no retries
       );
 
       console.log("=== TOKEN CREATION RESPONSE ===");
@@ -119,9 +123,13 @@ export default function LaunchPage() {
 
       // Validate that token was actually created and saved
       if (!result.data || !result.data.fairLaunchId) {
-        console.error("⚠️ WARNING: Token created on blockchain but may not be saved to database!");
+        console.error(
+          "⚠️ WARNING: Token created on blockchain but may not be saved to database!"
+        );
         console.error("Response data:", result.data);
-        toast.warning("Token created on blockchain, but may not appear in explore. Contact support if issue persists.");
+        toast.warning(
+          "Token created on blockchain, but may not appear in explore. Contact support if issue persists."
+        );
       }
 
       setCreatedToken(result.data);
@@ -168,7 +176,7 @@ export default function LaunchPage() {
               <h1 className="mb-6 text-5xl font-black ">Meme Created!</h1>
               <p className="mb-8 text-xl text-neutral-600">
                 Your meme has been successfully tokenized and is now live on the
-                Lens chain.
+                Base chain.
               </p>
 
               <div className="p-8 mb-8 bg-neutral-900 ">
