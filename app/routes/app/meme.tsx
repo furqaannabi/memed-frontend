@@ -8,7 +8,6 @@ import ClaimTokenPanel from "@/components/app/meme/ClaimTokenPanel";
 import RefundPanel from "@/components/app/meme/RefundPanel";
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
-// import TradeForm from "@/components/app/meme/TradeForm"; // Commented out - not needed per team lead
 import {
   useFairLaunchData,
   useIsRefundable,
@@ -426,12 +425,6 @@ export default function Meme() {
               </div>
             </div>
           )}
-          {/* TradeForm commented out per team lead - not needed */}
-          {/* {currentPhase === 3 && (
-            <div className="w-full xl:w-[400px] flex flex-col space-y-4 sm:space-y-6">
-              <TradeForm tokenAddress={token?.address} />
-            </div>
-          )} */}
           {/* ClaimTokenPanel for successful launch (status 3) */}
           {currentPhase === 3 && (
             <div className="w-full xl:w-[400px] flex flex-col space-y-4 sm:space-y-6">
