@@ -140,10 +140,11 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
 
   // Extract tokens and refund amount from contract result
   // Only show calculated tokens if user has entered an amount
-  const calculatedTokens = ethAmount && calculationResult?.[0]
+  // Note: Use !== undefined instead of truthy check because 0n is falsy but valid
+  const calculatedTokens = ethAmount && calculationResult?.[0] !== undefined
     ? formatEther(calculationResult[0])
     : "";
-  const refundAmount = ethAmount && calculationResult?.[1] ? calculationResult[1] : 0n;
+  const refundAmount = ethAmount && calculationResult?.[1] !== undefined ? calculationResult[1] : 0n;
 
   // State for success message
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -192,6 +193,12 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   const handleCommitClick = () => {
     if (ethAmountInWei === 0n) return;
 
+    console.log("🚀 Starting commit flow...", {
+      tokenId: tokenId.toString(),
+      amount: ethAmountInWei.toString(),
+      address,
+    });
+
     setFlowState("committing");
 
     // Send native ETH directly via value parameter
@@ -200,6 +207,14 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       value: ethAmountInWei, // ETH sent with transaction
     });
   };
+
+  // Reset flow state if user cancelled wallet popup (isPending goes false without confirmation)
+  useEffect(() => {
+    if (flowState === "committing" && !isCommitting && !isConfirmingCommit && !isCommitConfirmed && !commitError) {
+      console.log("⚠️ Commit was cancelled by user (wallet popup closed)");
+      setFlowState("idle");
+    }
+  }, [flowState, isCommitting, isConfirmingCommit, isCommitConfirmed, commitError]);
 
   const handleCancelCommit = () => {
     // Cancel user's commitment if they have an active commitment
@@ -326,7 +341,8 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
               <div className="font-medium">
                 Expected Tokens:{" "}
                 <span className="text-white">
-                  {formatTokenAmount(formatEther(userCommitment.tokenAmount))}{" "}
+                  {/* Use expectedClaim[0] when available (accurate for oversubscribed), else fall back to tokenAmount */}
+                  {formatTokenAmount(formatEther(expectedClaim?.[0] ?? userCommitment.tokenAmount))}{" "}
                   {memeTokenSymbol || "MEME"}
                 </span>
               </div>
