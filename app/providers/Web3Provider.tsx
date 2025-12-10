@@ -39,6 +39,9 @@ const chainConfig = getChainConfig();
 // This tells Wagmi which blockchains to support and how to connect to them
 const config = createConfig(
   getDefaultConfig({
+    // Enable SSR support to prevent hydration errors in production
+    ssr: true,
+
     // Which blockchain networks to support
     chains: chainConfig.chains,
 
