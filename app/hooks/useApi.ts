@@ -314,6 +314,12 @@ export function useApi<T = any>(
 
       if (!mountedRef.current) return;
 
+      // Check if response indicates an error (API returns 200 but with error field)
+      const responseData = response.data as any;
+      if (responseData?.error || response.success === false) {
+        throw new Error(responseData?.error || responseData?.message || 'Request failed');
+      }
+
       let finalData = response.data;
       
       // Apply transform if provided
@@ -337,6 +343,7 @@ export function useApi<T = any>(
       if (onSuccess) {
         onSuccess(finalData);
       }
+
 
     } catch (error) {
       if (!mountedRef.current) return;

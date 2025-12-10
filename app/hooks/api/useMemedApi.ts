@@ -354,6 +354,8 @@ export function useTokenEngagement(
       cacheDuration: 5 * 60 * 1000, // 5 minutes - engagement data updates periodically
       immediate: !!tokenAddress, // Only fetch if token address is provided
       deps: [tokenAddress],
+      timeout: 10000, // 10 second timeout (fail faster if backend is slow)
+      retries: 1, // Only 1 retry instead of default 3 (max ~20s wait)
       ...options,
     }
   );

@@ -84,8 +84,12 @@ export default function CreateMemeForm({
               placeholder="Tell the story behind your meme..."
               className="min-h-[100px] border border-neutral-700 bg-neutral-900 text-white w-full p-2 rounded-md cursor-pointer outline-0 resize-none"
               value={memeDescription}
-              onChange={(e) => setMemeDescription(e.target.value)}
+              onChange={(e) => setMemeDescription(e.target.value.slice(0, 280))}
+              maxLength={280}
             />
+            <p className={`text-xs mt-1 ${memeDescription.length >= 280 ? 'text-red-400' : 'text-gray-500'}`}>
+              {memeDescription.length}/280 characters
+            </p>
           </div>
         </div>
 
