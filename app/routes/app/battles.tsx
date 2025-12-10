@@ -27,6 +27,8 @@ import {
   useGetBattleCooldownDuration,
   useGetBattleDuration,
   useGetBattleAllocations,
+  useGetBattleScore,
+  useGetBattleScoresBatch,
 } from "@/hooks/contracts/useMemedBattle";
 import { useAuthStore } from "@/store/auth";
 import { useGetWarriorNFT } from "@/hooks/contracts/useMemedFactory";
@@ -245,6 +247,12 @@ export default function Battles() {
 
   // Parse battles data from contract response
   const battles: Battle[] = (battlesData as Battle[]) || [];
+
+  // Extract all battle IDs for batch score fetching
+  const battleIds = useMemo(() => battles.map(b => b.battleId), [battles]);
+
+  // Batch fetch all battle scores from contract
+  const { scoresMap: battleScoresMap } = useGetBattleScoresBatch(battleIds);
 
   // Filter battles by status
   const filteredBattles = battles.filter((battle) => {
@@ -606,17 +614,16 @@ export default function Battles() {
     setShowDetailsModal(true);
   };
 
-  // Calculate battle score (Heat 60% + NFTs 40%)
-  const calculateBattleScore = (heat: bigint, nfts: bigint): number => {
-    const heatScore = Number(heat) * 0.6;
-    const nftScore = Number(nfts) * 0.4;
-    return heatScore + nftScore;
-  };
-
-  // Helper: Calculate battle progress percentages for both sides
+  // Helper: Calculate battle progress percentages for both sides using CONTRACT scores
+  // Contract returns scores with 18 decimals, so we divide by 1e18 for display
+  // Falls back to 0 if contract scores not yet loaded
   const calculateBattleProgress = (battle: Battle) => {
-    const scoreA = calculateBattleScore(battle.heatA, battle.memeANftsAllocated);
-    const scoreB = calculateBattleScore(battle.heatB, battle.memeBNftsAllocated);
+    const contractScores = battleScoresMap[battle.battleId.toString()];
+    
+    // Use contract scores if available, otherwise default to 0
+    // Divide by 1e18 since contract returns scores in 18 decimal format
+    const scoreA = contractScores ? Number(contractScores.scoreA) / 1e18 : 0;
+    const scoreB = contractScores ? Number(contractScores.scoreB) / 1e18 : 0;
     const total = scoreA + scoreB;
     const percentageA = total > 0 ? (scoreA / total) * 100 : 50;
     const percentageB = 100 - percentageA;
@@ -1942,16 +1949,16 @@ export default function Battles() {
                                   Total Score
                                 </span>
                                 <span className="text-white font-bold text-lg">
-                                  {calculateBattleScore(
-                                    detailsBattle.heatA,
-                                    detailsBattle.memeANftsAllocated
-                                  ).toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                  })}
+                                  {(() => {
+                                    const { scoreA } = calculateBattleProgress(detailsBattle);
+                                    return scoreA.toLocaleString(undefined, {
+                                      maximumFractionDigits: 2,
+                                    });
+                                  })()}
                                 </span>
                               </div>
                               <p className="text-xs text-neutral-500 mt-1">
-                                (Heat × 60% + NFTs × 40%)
+                                Score from contract
                               </p>
                             </div>
                           </div>
@@ -2024,16 +2031,16 @@ export default function Battles() {
                                   Total Score
                                 </span>
                                 <span className="text-white font-bold text-lg">
-                                  {calculateBattleScore(
-                                    detailsBattle.heatB,
-                                    detailsBattle.memeBNftsAllocated
-                                  ).toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                  })}
+                                  {(() => {
+                                    const { scoreB } = calculateBattleProgress(detailsBattle);
+                                    return scoreB.toLocaleString(undefined, {
+                                      maximumFractionDigits: 2,
+                                    });
+                                  })()}
                                 </span>
                               </div>
                               <p className="text-xs text-neutral-500 mt-1">
-                                (Heat × 60% + NFTs × 40%)
+                                Score from contract
                               </p>
                             </div>
                           </div>
@@ -2076,35 +2083,15 @@ export default function Battles() {
                         <div className="flex justify-between text-xs text-neutral-500 mt-1">
                           <span>
                             {(() => {
-                              const scoreA = calculateBattleScore(
-                                detailsBattle.heatA,
-                                detailsBattle.memeANftsAllocated
-                              );
-                              const scoreB = calculateBattleScore(
-                                detailsBattle.heatB,
-                                detailsBattle.memeBNftsAllocated
-                              );
-                              const total = scoreA + scoreB;
-                              return total > 0
-                                ? ((scoreA / total) * 100).toFixed(1)
-                                : "50.0";
+                              const { percentageA } = calculateBattleProgress(detailsBattle);
+                              return percentageA.toFixed(1);
                             })()}
                             %
                           </span>
                           <span>
                             {(() => {
-                              const scoreA = calculateBattleScore(
-                                detailsBattle.heatA,
-                                detailsBattle.memeANftsAllocated
-                              );
-                              const scoreB = calculateBattleScore(
-                                detailsBattle.heatB,
-                                detailsBattle.memeBNftsAllocated
-                              );
-                              const total = scoreA + scoreB;
-                              return total > 0
-                                ? ((scoreB / total) * 100).toFixed(1)
-                                : "50.0";
+                              const { percentageB } = calculateBattleProgress(detailsBattle);
+                              return percentageB.toFixed(1);
                             })()}
                             %
                           </span>
@@ -2141,8 +2128,8 @@ export default function Battles() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <span className="text-neutral-300">Winner:</span>
-                          <span className="text-green-400 font-mono font-semibold">
-                            {detailsBattle.winner}
+                          <span className="text-green-400 font-semibold">
+                            {getTokenDetails(detailsBattle.winner).name}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -2150,7 +2137,7 @@ export default function Battles() {
                             Total Reward:
                           </span>
                           <span className="text-white font-bold">
-                            {formatEther(detailsBattle.totalReward)} tokens
+                            {Number(formatEther(detailsBattle.totalReward)).toLocaleString(undefined, { maximumFractionDigits: 2 })} tokens
                           </span>
                         </div>
                       </div>

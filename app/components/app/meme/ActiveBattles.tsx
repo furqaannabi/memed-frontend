@@ -42,8 +42,9 @@ const BattleCardWithScore = ({ battle, memeADetails, memeBDetails }: BattleCardW
   const { data: scoreData } = useGetBattleScore(battle.battleId);
 
   // scoreData is a tuple: [scoreA, scoreB, heatScoreA, heatScoreB, valueScoreA, valueScoreB]
-  const scoreA = scoreData ? Number(scoreData[0]) : 0;
-  const scoreB = scoreData ? Number(scoreData[1]) : 0;
+  // Divide by 1e18 since contract returns scores with 18 decimals
+  const scoreA = scoreData ? Number(scoreData[0]) / 1e18 : 0;
+  const scoreB = scoreData ? Number(scoreData[1]) / 1e18 : 0;
 
   // Calculate percentages from contract scores
   const total = scoreA + scoreB;

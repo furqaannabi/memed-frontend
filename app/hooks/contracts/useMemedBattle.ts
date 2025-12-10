@@ -1,6 +1,7 @@
 import {
   useAccount,
   useReadContract,
+  useReadContracts,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
@@ -319,4 +320,63 @@ export function useGetBattleScore(battleId: bigint | undefined) {
       refetchInterval: 5000, // Refetch every 5 seconds for live score updates
     },
   });
+}
+
+/**
+ * Interface for battle score data from contract
+ */
+export interface BattleScoreData {
+  scoreA: bigint;
+  scoreB: bigint;
+  heatScoreA: bigint;
+  heatScoreB: bigint;
+  valueScoreA: bigint;
+  valueScoreB: bigint;
+}
+
+/**
+ * Hook to batch fetch battle scores for multiple battles using multicall.
+ * This is more efficient than calling useGetBattleScore individually for each battle.
+ * @param battleIds Array of battle IDs to fetch scores for
+ * @returns Map of battleId -> BattleScoreData
+ */
+export function useGetBattleScoresBatch(battleIds: bigint[]) {
+  // Build contract calls for each battle
+  const contracts = battleIds.map((battleId) => ({
+    address: BATTLE_ADDRESS,
+    abi: memedBattleAbi,
+    functionName: "getBattleScore" as const,
+    args: [battleId] as const,
+  }));
+
+  const { data, isLoading, error, refetch } = useReadContracts({
+    contracts,
+    query: {
+      enabled: battleIds.length > 0,
+      refetchInterval: 5000, // Refetch every 5 seconds for live score updates
+    },
+  });
+
+  // Build a map of battleId -> score data for easy lookup
+  const scoresMap: Record<string, BattleScoreData> = {};
+  
+  if (data) {
+    battleIds.forEach((battleId, index) => {
+      const result = data[index];
+      if (result && result.status === "success" && result.result) {
+        // Result is a tuple: [scoreA, scoreB, heatScoreA, heatScoreB, valueScoreA, valueScoreB]
+        const scoreData = result.result as readonly [bigint, bigint, bigint, bigint, bigint, bigint];
+        scoresMap[battleId.toString()] = {
+          scoreA: scoreData[0],
+          scoreB: scoreData[1],
+          heatScoreA: scoreData[2],
+          heatScoreB: scoreData[3],
+          valueScoreA: scoreData[4],
+          valueScoreB: scoreData[5],
+        };
+      }
+    });
+  }
+
+  return { scoresMap, isLoading, error, refetch };
 }
