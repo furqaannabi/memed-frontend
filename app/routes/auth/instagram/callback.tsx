@@ -96,7 +96,7 @@ export default function InstagramCallback() {
               Connecting Instagram...
             </h2>
             <p className="text-neutral-400">
-              Please wait while we link your Instagram Business account
+              Please wait while we link your Instagram account
             </p>
           </>
         )}

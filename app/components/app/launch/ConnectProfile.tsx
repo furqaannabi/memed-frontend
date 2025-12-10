@@ -195,7 +195,7 @@ export default function ConnectProfile({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-neutral-400">
-                  Instagram Business Account
+                  Instagram Business or Creator Account
                 </label>
               </div>
               <button
@@ -204,14 +204,14 @@ export default function ConnectProfile({
                 className="w-full px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium rounded cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Instagram size={18} />
-                {isConnectingInstagram ? "Connecting..." : "Connect Instagram Business"}
+                {isConnectingInstagram ? "Connecting..." : "Connect Instagram"}
               </button>
               <div className="mt-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
                 <p className="text-xs text-purple-300 font-medium mb-1">
-                  ⚠️ Business Accounts Only
+                  ⚠️ Business or Creator Accounts Only
                 </p>
                 <p className="text-xs text-neutral-400">
-                  Only Instagram Business accounts can be linked. Personal accounts will be rejected.{" "}
+                  Only Instagram Business or Creator accounts can be linked. Personal accounts will be rejected.{" "}
                   <a
                     href="https://help.instagram.com/502981923235522"
                     target="_blank"

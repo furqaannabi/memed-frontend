@@ -312,7 +312,7 @@ export function useInstagramAuthUrl(options?: UseApiOptions) {
 }
 
 /**
- * Connect Instagram Business account using OAuth code
+ * Connect Instagram Business or Creator account using OAuth code
  * Sends authorization code to backend for token exchange and account linking
  * @param code - Authorization code from Instagram OAuth callback
  */

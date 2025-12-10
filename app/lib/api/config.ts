@@ -396,10 +396,10 @@ export const API_ENDPOINTS = {
 
   /**
    * POST /api/connect-instagram-auth
-   * Link Instagram Business account to user
+   * Link Instagram Business or Creator account to user
    * Body: { code: string } - Authorization code from Instagram OAuth callback
    * Returns: { message: string } - Success message
-   * Validates: Only Business Instagram accounts accepted
+   * Validates: Only Business or Creator Instagram accounts accepted
    */
   CONNECT_INSTAGRAM: "/api/connect-instagram-auth",
 

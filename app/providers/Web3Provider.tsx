@@ -24,7 +24,7 @@
 
 "use client";
 
-import { WagmiProvider, createConfig, http, fallback } from "wagmi";
+import { WagmiProvider, createConfig, http, fallback, cookieStorage, createStorage } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 import { env } from "../utils/env";
@@ -41,6 +41,13 @@ const config = createConfig(
   getDefaultConfig({
     // Enable SSR support to prevent hydration errors in production
     ssr: true,
+
+    // Storage configuration for SSR hydration
+    // Uses cookie-based storage to persist wallet state across SSR/client boundary
+    // This prevents "useSyncExternalStore" hydration errors
+    storage: createStorage({
+      storage: cookieStorage,
+    }),
 
     // Which blockchain networks to support
     chains: chainConfig.chains,

@@ -343,7 +343,7 @@ export default function Settings() {
                   </div>
                 )}
 
-                {/* Instagram Account - Shows connected Instagram Business account */}
+                {/* Instagram Account - Shows connected Instagram Business or Creator account */}
                 {instagramAccount ? (
                   <div className="bg-neutral-800 rounded-lg p-4 border border-purple-500/30">
                     <div className="flex items-center justify-between mb-2">
