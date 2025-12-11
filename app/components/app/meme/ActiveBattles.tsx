@@ -58,8 +58,8 @@ const BattleCardWithScore = ({ battle, memeADetails, memeBDetails }: BattleCardW
       rightImage={memeBDetails.image}
       leftLabel={memeADetails.name}
       rightLabel={memeBDetails.name}
-      leftViews={`${Number(battle.heatA).toLocaleString()} Heat`}
-      rightViews={`${Number(battle.heatB).toLocaleString()} Heat`}
+      leftViews={`${Number(scoreData?.[2] ?? battle.heatA).toLocaleString()} Heat`}
+      rightViews={`${Number(scoreData?.[3] ?? battle.heatB).toLocaleString()} Heat`}
       leftPercentage={percentageA}
       rightPercentage={percentageB}
     />

@@ -1,8 +1,10 @@
 import {
   useReadContract,
+  useReadContracts,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
+import { useMemo } from "react";
 import { FACTORY_ADDRESS } from "@/config/contracts";
 import { factoryAbi } from "@/abi";
 
@@ -103,4 +105,47 @@ export function useTokenHeat(tokenAddress: `0x${string}` | undefined) {
       refetchInterval: 30000, // Refetch every 30 seconds for live Heat updates
     },
   });
+}
+
+/**
+ * Hook to get Heat scores for multiple tokens in a single batch call.
+ * Uses multicall for efficient fetching.
+ *
+ * @param tokenAddresses Array of token addresses to fetch heat for.
+ * @returns A map of token address (lowercase) to heat score (bigint).
+ */
+export function useTokenHeatBatch(tokenAddresses: `0x${string}`[]) {
+  // Build contract calls for each token
+  const contracts = useMemo(() => {
+    return tokenAddresses.map((address) => ({
+      address: FACTORY_ADDRESS,
+      abi: factoryAbi,
+      functionName: "getHeat" as const,
+      args: [address] as const,
+    }));
+  }, [tokenAddresses]);
+
+  const { data, isLoading, refetch } = useReadContracts({
+    contracts: contracts.length > 0 ? contracts : undefined,
+    query: {
+      enabled: contracts.length > 0,
+      refetchInterval: 15000, // Refetch every 15 seconds for battles
+    },
+  });
+
+  // Build a map of address -> heat score
+  const heatMap = useMemo(() => {
+    const map: Record<string, bigint> = {};
+    if (data) {
+      data.forEach((result, index) => {
+        if (result.status === "success" && result.result !== undefined) {
+          const address = tokenAddresses[index].toLowerCase();
+          map[address] = result.result as bigint;
+        }
+      });
+    }
+    return map;
+  }, [data, tokenAddresses]);
+
+  return { heatMap, isLoading, refetch };
 }

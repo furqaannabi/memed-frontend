@@ -36,7 +36,6 @@ import {
   useUserActiveNfts,
   useWarriorBalance,
 } from "@/hooks/contracts/useMemedWarriorNFT";
-import { useTokenHeat } from "@/hooks/contracts/useMemedFactory";
 import top from "@/assets/images/battle-top.svg";
 import bottom from "@/assets/images/battle-bottom.svg";
 import { apiClient } from "@/lib/api/client";
@@ -207,6 +206,19 @@ export default function Battles() {
   const allocatedNFTIds = allocatedNFTsArray && Array.isArray(allocatedNFTsArray)
     ? allocatedNFTsArray
     : [];
+    
+  // Debug: Log allocation data when modal is open
+  useEffect(() => {
+    if (showAllocateModal) {
+      console.log("[NFT Allocation Debug]", {
+        battleId: allocationBattle?.battleId?.toString(),
+        activeNFTs: activeNFTs?.map(id => id.toString()),
+        allocatedNFTIds: allocatedNFTIds.map(id => id.toString()),
+        userBattleAllocations,
+        supportedTokenAddress,
+      });
+    }
+  }, [showAllocateModal, allocationBattle, activeNFTs, allocatedNFTIds, userBattleAllocations, supportedTokenAddress]);
 
   // Helper function to check if an NFT is already allocated to this battle
   const isNFTAllocated = (nftId: bigint): boolean => {
@@ -217,8 +229,17 @@ export default function Battles() {
     return allocatedNFTIds.some((allocatedId) => allocatedId === nftId);
   };
 
-  // For display purposes, we'll show all active NFTs but disable allocated ones
-  const availableNFTsForBattle = activeNFTs || [];
+  // Filter out NFTs already allocated to this battle from the display list
+  // This ensures allocated NFTs are completely hidden, not just disabled
+  const availableNFTsForBattle = useMemo(() => {
+    if (!activeNFTs) return [];
+    if (!allocatedNFTIds || allocatedNFTIds.length === 0) return activeNFTs;
+    
+    // Filter out NFTs that are already allocated to this battle
+    return activeNFTs.filter((nftId) => 
+      !allocatedNFTIds.some((allocatedId) => allocatedId === nftId)
+    );
+  }, [activeNFTs, allocatedNFTIds]);
 
   // Refetch NFTs and allocations immediately when allocation modal opens
   // Wait for allocationBattle and supportedTokenAddress to be set
@@ -252,6 +273,7 @@ export default function Battles() {
   const battleIds = useMemo(() => battles.map(b => b.battleId), [battles]);
 
   // Batch fetch all battle scores from contract
+  // This includes heatScoreA and heatScoreB for each battle
   const { scoresMap: battleScoresMap } = useGetBattleScoresBatch(battleIds);
 
   // Filter battles by status
@@ -523,10 +545,12 @@ export default function Battles() {
   }, [user?.token, user?.id, battles]); // Recompute when user tokens or battles change
 
   // Get all token addresses created by the user (for checking pending challenges)
-  const userTokenAddresses =
-    user?.token
+  // Wrapped in useMemo to ensure reactivity when user data loads
+  const userTokenAddresses = useMemo(() => {
+    return user?.token
       ?.filter((t) => t.userId === user.id)
       .map((t) => t.address?.toLowerCase()) || [];
+  }, [user?.token, user?.id]);
 
   // Get pending challenges to the user's tokens (where user's token is challenged - Meme B)
   // Exclude battles that are being accepted, rejected, or have been accepted/rejected
@@ -983,13 +1007,13 @@ export default function Battles() {
                                   <div className="flex items-center justify-center gap-1 text-xs">
                                     <Flame className="w-3 h-3 text-orange-400" />
                                     <span className="text-neutral-400">
-                                      {Number(battle.heatA).toLocaleString()}
+                                      {Number(battleScoresMap[battle.battleId.toString()]?.heatScoreA ?? battle.heatA).toLocaleString()}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-center gap-1 text-xs">
                                     <Users className="w-3 h-3 text-blue-400" />
                                     <span className="text-neutral-400">
-                                      {Number(battle.memeANftsAllocated)} NFTs
+                                      {Number(battle.memeANftsAllocated)} NFT{Number(battle.memeANftsAllocated) !== 1 ? 's' : ''}
                                     </span>
                                   </div>
                                 </div>
@@ -1048,13 +1072,13 @@ export default function Battles() {
                                   <div className="flex items-center justify-center gap-1 text-xs">
                                     <Flame className="w-3 h-3 text-orange-400" />
                                     <span className="text-neutral-400">
-                                      {Number(battle.heatB).toLocaleString()}
+                                      {Number(battleScoresMap[battle.battleId.toString()]?.heatScoreB ?? battle.heatB).toLocaleString()}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-center gap-1 text-xs">
                                     <Users className="w-3 h-3 text-blue-400" />
                                     <span className="text-neutral-400">
-                                      {Number(battle.memeBNftsAllocated)} NFTs
+                                      {Number(battle.memeBNftsAllocated)} NFT{Number(battle.memeBNftsAllocated) !== 1 ? 's' : ''}
                                     </span>
                                   </div>
                                 </div>
@@ -1931,7 +1955,7 @@ export default function Battles() {
                                 <span>Heat Score</span>
                               </div>
                               <span className="text-white font-semibold">
-                                {Number(detailsBattle.heatA).toLocaleString()}
+                                {Number(battleScoresMap[detailsBattle.battleId.toString()]?.heatScoreA ?? detailsBattle.heatA).toLocaleString()}
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
@@ -2013,7 +2037,7 @@ export default function Battles() {
                                 <span>Heat Score</span>
                               </div>
                               <span className="text-white font-semibold">
-                                {Number(detailsBattle.heatB).toLocaleString()}
+                                {Number(battleScoresMap[detailsBattle.battleId.toString()]?.heatScoreB ?? detailsBattle.heatB).toLocaleString()}
                               </span>
                             </div>
                             <div className="flex items-center justify-between">

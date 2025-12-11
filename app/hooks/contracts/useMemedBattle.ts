@@ -266,11 +266,13 @@ export function useGetBattleAllocations(
     abi: memedBattleAbi,
     functionName: "getBattleAllocations",
     args:
-      battleId && userAddress && memeAddress
+      battleId !== undefined && userAddress && memeAddress
         ? [battleId, userAddress, memeAddress]
         : undefined,
     query: {
-      enabled: !!battleId && !!userAddress && !!memeAddress,
+      enabled: battleId !== undefined && !!userAddress && !!memeAddress,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
     },
   });
 }

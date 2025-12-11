@@ -278,13 +278,18 @@ export default function Explore() {
 
   // Calculate platform statistics
   // Use pagination.totalCount for accurate platform-wide total
-  // Use unclaimedCount for number of active/unclaimed launches
+  // Count active launches from contract data (status 0 = Active, 1 = Ongoing)
   const platformStats = useMemo(() => {
+    // Count tokens with active fair launch status from contract data
+    const activeLaunchCount = Object.values(contractDataMap).filter(
+      (data) => data.status === 0 || data.status === 1
+    ).length;
+    
     return {
       totalTokens: pagination?.totalCount || 0, // Total tokens across all pages (platform-wide)
-      activeLaunches: unclaimedCount || 0, // Number of active/unclaimed launches
+      activeLaunches: activeLaunchCount, // Number of truly active fair launches
     };
-  }, [pagination?.totalCount, unclaimedCount]);
+  }, [pagination?.totalCount, contractDataMap]);
 
   // Pagination handlers
   const handleNextPage = () => {
