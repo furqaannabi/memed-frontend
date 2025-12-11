@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Gift, CheckCircle, AlertTriangle } from "lucide-react";
+import { Gift, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import {
   useClaim,
   useGetUserCommitment,
   useGetExpectedClaim,
+  usePricePerTokenWei,
 } from "@/hooks/contracts/useMemedTokenSale";
+import { useWeiToUsd, useEthUsdPrice } from "@/hooks/contracts/useChainlinkPriceFeed";
 
 /**
  * Format large numbers for display with proper decimal places and compact notation
@@ -59,6 +61,10 @@ const ClaimTokenPanel = ({
   // Returns actual tokens user will receive + any refund amount
   const { data: expectedClaim, isLoading: isLoadingExpectedClaim } =
     useGetExpectedClaim(tokenId, address);
+
+  // Get token price for USD calculation
+  const { data: pricePerTokenWei } = usePricePerTokenWei();
+  const { data: ethPriceData } = useEthUsdPrice();
 
   // Claim hook
   const {
@@ -127,6 +133,26 @@ const ClaimTokenPanel = ({
   const actualTokens = expectedClaim ? expectedClaim[0] : 0n;
   const refundAmount = expectedClaim ? expectedClaim[1] : 0n;
   const hasRefund = refundAmount > 0n;
+  
+  // USD conversions for ETH values
+  const refundUsd = useWeiToUsd(refundAmount);
+  const commitmentUsd = useWeiToUsd(userCommitment?.amount);
+  
+  // Calculate token value in USD
+  // Token value = (tokens * pricePerToken) in ETH, then convert to USD
+  const tokensValueUsd = (() => {
+    if (!actualTokens || actualTokens === 0n || !pricePerTokenWei || !ethPriceData) {
+      return null;
+    }
+    // Calculate total value in wei: tokens * pricePerToken / 1e18 (because tokens are in 18 decimals)
+    const tokensEth = Number(formatEther(actualTokens));
+    const priceEth = Number(formatEther(pricePerTokenWei));
+    const totalEthValue = tokensEth * priceEth;
+    const usdValue = totalEthValue * ethPriceData.priceNumber;
+    
+    if (usdValue < 0.01) return `$${usdValue.toFixed(6)}`;
+    return `$${usdValue.toFixed(2)}`;
+  })();
 
   // Check if user has tokens to claim
   // Use expectedClaim instead of userCommitment.tokenAmount because tokenAmount is not stored in the commitment struct
@@ -157,11 +183,11 @@ const ClaimTokenPanel = ({
 
       {/* Transaction Processing State */}
       {claimStarted && isTransacting && (
-        <div className="bg-neutral-500/20 border border-neutral-600 text-neutral-300 p-4 rounded-md">
+        <div className="bg-green-500/10 border border-green-500/30 text-neutral-300 p-4 rounded-md">
           <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-neutral-400"></div>
+            <Loader2 className="h-5 w-5 text-green-400 animate-spin" />
             <div>
-              <div className="text-sm font-medium mb-1">
+              <div className="text-sm font-medium mb-1 text-green-400">
                 {isClaiming ? "Confirm Transaction..." : "Processing Claim..."}
               </div>
               <div className="text-xs text-neutral-300">
@@ -247,6 +273,7 @@ const ClaimTokenPanel = ({
                     proportionally and you'll receive a refund of{" "}
                     <span className="text-white font-medium">
                       {formatTokenAmount(formatEther(refundAmount))} ETH
+                      {refundUsd && <span className="text-green-400 ml-1">({refundUsd})</span>}
                     </span>{" "}
                     along with your tokens.
                   </div>
@@ -265,24 +292,37 @@ const ClaimTokenPanel = ({
                 <span className="text-xs text-neutral-400">
                   Tokens to Claim:
                 </span>
-                <span className="text-white font-bold text-lg">
-                  {formatTokenAmount(formatEther(actualTokens))} {tokenName}
-                </span>
+                <div className="text-right">
+                  <span className="text-white font-bold text-lg">
+                    {formatTokenAmount(formatEther(actualTokens))} {tokenName}
+                  </span>
+                  {tokensValueUsd && (
+                    <div className="text-green-400 text-sm">{tokensValueUsd}</div>
+                  )}
+                </div>
               </div>
               {hasRefund && (
                 <div className="flex justify-between items-center pt-2 border-t border-green-500/30">
                   <span className="text-xs text-neutral-400">ETH Refund:</span>
-                  <span className="text-white font-bold text-lg">
-                    {formatTokenAmount(formatEther(refundAmount))} ETH
-                  </span>
+                  <div className="text-right">
+                    <span className="text-white font-bold text-lg">
+                      {formatTokenAmount(formatEther(refundAmount))} ETH
+                    </span>
+                    {refundUsd && (
+                      <div className="text-green-400 text-sm">{refundUsd}</div>
+                    )}
+                  </div>
                 </div>
               )}
               {userCommitment && (
                 <div className="flex justify-between items-center text-xs text-neutral-500 pt-1">
                   <span>Your Commitment:</span>
-                  <span>
-                    {formatTokenAmount(formatEther(userCommitment.amount))} ETH
-                  </span>
+                  <div className="text-right">
+                    <span>{formatTokenAmount(formatEther(userCommitment.amount))} ETH</span>
+                    {commitmentUsd && (
+                      <span className="text-green-400 ml-1">({commitmentUsd})</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
