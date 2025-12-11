@@ -11,8 +11,9 @@ import { useChainId, useSwitchChain } from "wagmi";
 import { useEffect } from "react";
 import { getChainConfig } from "@/config/chains";
 import CountdownTimer from "./CountdownTimer";
+import { useWeiToUsd } from "@/hooks/contracts/useChainlinkPriceFeed";
 
-/**
+/** 
  * Format large numbers for display with proper decimal places and compact notation
  * @param value - The number value as a string (from formatEther)
  * @returns Formatted string with appropriate precision
@@ -80,6 +81,10 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   const fairLaunchStartTime = fairLaunchData ? fairLaunchData[1] : 0n;
   const fairLaunchStatus = fairLaunchData ? fairLaunchData[0] : 0;
   
+  // Convert to USD for display
+  const totalCommittedUsd = useWeiToUsd(totalCommitted);
+  const targetUsd = useWeiToUsd(TARGET_ETH);
+  
   // Calculate progress percentage (can exceed 100% for oversubscription)
   const progressPercentage = TARGET_ETH > 0n
     ? Number((totalCommitted * 100n) / TARGET_ETH)
@@ -90,6 +95,7 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
   const oversubscriptionPercentage = isOversubscribed
     ? Number(((totalCommitted - TARGET_ETH) * 100n) / TARGET_ETH)
     : 0;
+
 
   // Show network error if on wrong chain (fallback UI if auto-switch fails)
   if (!isCorrectNetwork) {
@@ -210,7 +216,10 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
         />
       </div>
       <div className="flex justify-between text-sm text-neutral-400 mb-2">
-        <span>{progressPercentage.toFixed(1)}% Complete ({formatTokenAmount(formatEther(totalCommitted))} ETH)</span>
+        <span>
+          {progressPercentage.toFixed(1)}% Complete
+          {totalCommittedUsd && <span className="text-green-400 ml-1">({totalCommittedUsd})</span>}
+        </span>
         <span>
           {formatTokenAmount(formatEther(totalCommitted))} / {formatTokenAmount(formatEther(TARGET_ETH))} ETH
         </span>
@@ -249,6 +258,9 @@ const LaunchProgress = ({ tokenId }: LaunchProgressProps) => {
               : "0 ETH"
             }
           </div>
+          {totalCommittedUsd && (
+            <div className="text-green-400 text-sm font-medium">{totalCommittedUsd}</div>
+          )}
           <div className="text-sm text-neutral-400">Total Committed</div>
         </div>
       </div>

@@ -3,10 +3,11 @@ import meme from "@/assets/images/meme.png";
 interface HorizontalCardProps {
   name: string;
   creator: string;
-  price: string;
+  raised?: string; // Amount raised in ETH
+  raisedUsd?: string; // Amount raised in USD
 }
 
-export function HorizontalCard({ name, creator, price }: HorizontalCardProps) {
+export function HorizontalCard({ name, creator, raised, raisedUsd }: HorizontalCardProps) {
   return (
     <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4 min-w-[200px] px-3 sm:px-4 py-2 bg-neutral-900 border-neutral-800 border rounded-full relative">
       <img
@@ -24,9 +25,11 @@ export function HorizontalCard({ name, creator, price }: HorizontalCardProps) {
             <span className="text-neutral-500 sm:hidden">by</span>
             <span className="text-white truncate">{creator}</span>
           </div>
-          <div className="text-primary text-xs font-semibold whitespace-nowrap pl-3">
-            {price}
-          </div>
+          {(raised || raisedUsd) && (
+            <div className="text-green-400 text-xs font-semibold whitespace-nowrap pl-2" title={`Raised: ${raised} ETH`}>
+              {raisedUsd ? `$${raisedUsd}` : `${raised} Ξ`}
+            </div>
+          )}
         </div>
       </div>
     </div>

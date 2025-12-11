@@ -18,6 +18,7 @@ import { useTokensBatchData } from "@/hooks/contracts/useTokensBatchData";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/config";
 import { useTokensLeaderboard } from "@/hooks/api/useMemedApi";
+import { useEthUsdPrice } from "@/hooks/contracts/useChainlinkPriceFeed";
 
 // Export the loader for this route, following the project convention
 export { memeTokensLoader as loader };
@@ -31,6 +32,9 @@ export default function Explore() {
   const loadedTokens = loaderData.data?.tokens || [];
   const pagination = loaderData.data?.pagination;
   const error = loaderData.error;
+  
+  // Get ETH price for USD conversion in carousel
+  const { data: ethPriceData } = useEthUsdPrice();
 
   // URL search params for pagination
   const [searchParams, setSearchParams] = useSearchParams();
@@ -386,14 +390,24 @@ export default function Explore() {
             {activeTab === "claimed" && (
               <div className="overflow-x-auto w-full scrollbar-hide pb-4 mb-4">
                 <div className="flex gap-4 w-full overflow-x-auto">
-                  {memeTokens.slice(0, 7).map((token) => (
-                    <HorizontalCard
-                      key={token.id}
-                      name={token.name}
-                      creator={token.creator}
-                      price={token.marketCap || "N/A"}
-                    />
-                  ))}
+                  {memeTokens.slice(0, 7).map((token) => {
+                    const contractData = token.fairLaunchId ? contractDataMap[token.fairLaunchId] : null;
+                    const totalCommitted = contractData?.fairLaunchData?.[2] as bigint | undefined;
+                    const raisedEthNum = totalCommitted ? Number(totalCommitted) / 1e18 : 0;
+                    const raisedEth = raisedEthNum > 0 ? raisedEthNum.toFixed(2) : undefined;
+                    const raisedUsd = (raisedEthNum > 0 && ethPriceData) 
+                      ? (raisedEthNum * ethPriceData.priceNumber).toFixed(0)
+                      : undefined;
+                    return (
+                      <HorizontalCard
+                        key={token.id}
+                        name={token.name}
+                        creator={token.creator}
+                        raised={raisedEth}
+                        raisedUsd={raisedUsd}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}

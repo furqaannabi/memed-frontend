@@ -1,108 +1,135 @@
 /**
- * Chainlink Price Feed Hooks
+ * ETH/USD Price Feed Hooks
  *
- * Provides hooks for fetching ETH/USD price from Chainlink oracle
- * and converting Wei amounts to USD values.
- *
- * Features:
- * - Real-time ETH/USD price from Chainlink (polls every 30 seconds)
- * - Staleness detection (warns if price data >1 hour old)
- * - Wei to USD conversion with proper decimal handling
- * - Formatted USD display with thousands separators
+ * Provides hooks for fetching ETH/USD price and converting Wei to USD.
+ * 
+ * Priority:
+ * 1. Chainlink on-chain oracle (decentralized, mainnet-ready)
+ * 2. CoinGecko API fallback (for testnets where Chainlink unavailable)
  */
 
+import { useState, useEffect } from "react";
 import { useReadContract } from "wagmi";
+import { baseSepolia } from "wagmi/chains";
+import { formatEther } from "viem";
 import { chainlinkPriceFeedAbi } from "@/abi";
 import { CHAINLINK_ETH_USD_ADDRESS } from "@/config/contracts";
 
+// CoinGecko cache for fallback
+let coinGeckoPrice: number | null = null;
+let lastCoinGeckoFetch = 0;
+const CACHE_DURATION = 60000; // 60 seconds
+
 /**
- * Fetch current ETH/USD price from Chainlink oracle
- *
- * Returns price data with staleness check:
- * - price: Current ETH/USD price (8 decimals, e.g., 250000000000 = $2,500)
- * - updatedAt: Timestamp of last price update
- * - isStale: true if price hasn't updated in >1 hour
- *
- * Automatically refetches every 30 seconds for real-time updates
+ * Fetch ETH/USD price - Chainlink first, CoinGecko fallback
  */
 export function useEthUsdPrice() {
-  const { data: priceData, ...rest } = useReadContract({
+  // Try Chainlink first
+  const { data: chainlinkData, isLoading: chainlinkLoading, error: chainlinkError } = useReadContract({
     address: CHAINLINK_ETH_USD_ADDRESS,
     abi: chainlinkPriceFeedAbi,
     functionName: "latestRoundData",
+    chainId: baseSepolia.id,
     query: {
-      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchInterval: 30000,
     },
   });
 
-  // Extract price and timestamp from Chainlink response
-  if (!priceData) {
-    return { data: null, ...rest };
+  // CoinGecko fallback state
+  const [coinGeckoState, setCoinGeckoState] = useState<{
+    price: number | null;
+    loading: boolean;
+  }>({ price: coinGeckoPrice, loading: false });
+
+  // Fetch CoinGecko if Chainlink fails
+  useEffect(() => {
+    const shouldFetchCoinGecko = !chainlinkData && !chainlinkLoading;
+
+    if (shouldFetchCoinGecko) {
+      const now = Date.now();
+      
+      // Use cache if valid
+      if (coinGeckoPrice && now - lastCoinGeckoFetch < CACHE_DURATION) {
+        setCoinGeckoState({ price: coinGeckoPrice, loading: false });
+        return;
+      }
+
+      setCoinGeckoState(prev => ({ ...prev, loading: true }));
+      
+      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
+        .then(res => res.json())
+        .then(data => {
+          if (data?.ethereum?.usd) {
+            coinGeckoPrice = data.ethereum.usd;
+            lastCoinGeckoFetch = now;
+            setCoinGeckoState({ price: data.ethereum.usd, loading: false });
+          }
+        })
+        .catch(() => {
+          setCoinGeckoState(prev => ({ ...prev, loading: false }));
+        });
+    }
+  }, [chainlinkData, chainlinkLoading, chainlinkError]);
+
+  // If Chainlink available, use it
+  if (chainlinkData) {
+    const [, answer, , updatedAt] = chainlinkData;
+    const price = Number(answer) / 1e8; // Convert from 8 decimals
+    
+    return {
+      data: {
+        price: BigInt(answer),
+        priceNumber: price,
+        isStale: Date.now() / 1000 - Number(updatedAt) > 3600,
+        source: "chainlink" as const,
+      },
+      isLoading: false,
+      error: null,
+    };
   }
 
-  const [, answer, , updatedAt] = priceData;
-  const price = BigInt(answer);
-  const timestamp = Number(updatedAt);
+  // Use CoinGecko fallback
+  if (coinGeckoState.price) {
+    return {
+      data: {
+        price: BigInt(Math.round(coinGeckoState.price * 1e8)),
+        priceNumber: coinGeckoState.price,
+        isStale: false,
+        source: "coingecko" as const,
+      },
+      isLoading: false,
+      error: null,
+    };
+  }
 
-  // Check if price is stale (>1 hour old)
-  const currentTime = Math.floor(Date.now() / 1000);
-  const isStale = currentTime - timestamp > 3600; // 3600 seconds = 1 hour
-
+  // Still loading
   return {
-    data: {
-      price,
-      updatedAt: timestamp,
-      isStale,
-    },
-    ...rest,
+    data: null,
+    isLoading: chainlinkLoading || coinGeckoState.loading,
+    error: chainlinkError,
   };
 }
 
 /**
  * Convert Wei amount to formatted USD string
- *
- * @param weiAmount - Amount in Wei (18 decimals), e.g., parseEther("1.5")
- * @returns Formatted USD string, e.g., "$3,750.00"
- *
- * Returns null if price feed unavailable or amount is undefined
- *
- * Conversion formula:
- * USD = (weiAmount × ethUsdPrice) / 10^26
- *
- * Example:
- * - weiAmount: 1.5 ETH = 1.5 × 10^18 Wei
- * - ethUsdPrice: $2,500 = 2500 × 10^8 (Chainlink 8 decimals)
- * - Result: (1.5 × 10^18 × 2500 × 10^8) / 10^26 = $3,750
  */
 export function useWeiToUsd(weiAmount: bigint | undefined): string | null {
   const { data: priceInfo } = useEthUsdPrice();
 
-  // Return null if price unavailable or amount not provided
   if (!priceInfo || !weiAmount) {
     return null;
   }
 
-  // Convert Wei to USD
-  // ETH has 18 decimals, Chainlink price has 8 decimals
-  // Total divisor: 10^26 (18 + 8)
-  const usdValueBigInt = (weiAmount * priceInfo.price) / BigInt(10 ** 26);
-  const usdValue = Number(usdValueBigInt);
+  const ethAmount = Number(formatEther(weiAmount));
+  const usdValue = ethAmount * priceInfo.priceNumber;
 
-  // Format as USD string with thousands separators
+  if (usdValue < 0.01 && usdValue > 0) {
+    return `$${usdValue.toFixed(6)}`;
+  }
+
   return formatUsd(usdValue);
 }
 
-/**
- * Format numeric USD value with proper formatting
- *
- * @param usdValue - Numeric USD amount
- * @returns Formatted string with dollar sign and commas, e.g., "$1,234.56"
- *
- * Examples:
- * - 2500 → "$2,500.00"
- * - 1234.567 → "$1,234.57" (rounded to 2 decimals)
- * - 0.5 → "$0.50"
- */
 function formatUsd(usdValue: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

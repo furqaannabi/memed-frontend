@@ -6,14 +6,13 @@
 // TODO: Add addresses for other networks as needed.
 
 export const CONTRACT_ADDRESSES = {
-  factory: "0x74920a04A38264f615AF3fD166d7eBBe1342CbB9",
-  memedBattle: "0x1360fcbd0a6D0991f75163543e8c1Ab30Da2402d",
-  memedBattleResolver: "0xbeFb7C821f17aF245A10a79541439A97C25d21f9",
-  memedEngageToEarn: "0x96838E931f08E227E176Cd310ff5A83F3e42FDA5",
-  memedTokenSale: "0x64C46B2e658Ea2bcf024A4A33fEad54B9B7065Ab",
-
+  factory: "0x4632920F33f62C59cbB8baf7740A96C384B4698a",
+  memedBattle: "0xC8734fF910661b91E20b7430c6e517e1d594be97",
+  memedBattleResolver: "0xbF1FE4cF68fb540c3Fb0393349a97668B34342D6",
+  memedEngageToEarn: "0x10d1f4E102A9cbE0D77f355a10A81B61FB6437Ab",
+  memedTokenSale: "0x2de10D81c76cd38606D2623031C8B2b8dA0A74Dc",
   // Chainlink ETH/USD Price Feeds (8 decimals)
-  chainlinkEthUsdSepolia: "0x4aDC67696bA383F43DD60A9e78F2C356FB85a231", // Base Sepolia testnet
+  chainlinkEthUsdSepolia: "0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1", // Base Sepolia testnet - from explorer
   chainlinkEthUsdMainnet: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70", // Base Mainnet
 } as const;
 

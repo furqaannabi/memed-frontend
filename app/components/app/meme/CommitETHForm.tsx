@@ -51,6 +51,23 @@ function formatTokenAmount(value: string): string {
   return num.toFixed(2);
 }
 
+/**
+ * Format very small ETH values (like token prices) with appropriate precision
+ */
+function formatSmallEthPrice(value: string): string {
+  const num = parseFloat(value);
+  if (num === 0) return "0";
+  
+  // For very small numbers, show in scientific notation or more decimals
+  if (num < 0.0001) {
+    return num.toExponential(2); // e.g., "1.00e-5"
+  }
+  if (num < 0.01) {
+    return num.toFixed(6); // e.g., "0.000100"
+  }
+  return num.toFixed(4);
+}
+
 // Custom hook for debouncing a value
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -160,7 +177,7 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
       // Show success message
       setShowSuccessMessage(true);
 
-      // Hide success message after 5 seconds
+      // Hide success message after 5 second
       const timer = setTimeout(() => {
         setShowSuccessMessage(false);
       }, 5000);
@@ -284,7 +301,6 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
   const refundUsdValue = useWeiToUsd(refundAmount);
   const pricePerTokenUsd = useWeiToUsd(pricePerTokenWei);
   const expectedRefundUsd = useWeiToUsd(expectedClaim?.[1]);
-
 
   return (
     <div className="bg-neutral-900 p-6 rounded-xl w-full space-y-4">
@@ -493,14 +509,14 @@ const CommitETHForm = ({ tokenId, tokenName, tokenSymbol: memeTokenSymbol, onCom
         </div>
       )}
 
-      {/* Price Display with USD value */}
+      {/* Price Display - USD prominently, ETH with proper precision */}
       {pricePerTokenWei && (
         <div className="text-xs text-neutral-400 text-center">
-          Price: {formatTokenAmount(formatEther(pricePerTokenWei))} ETH per {memeTokenSymbol || "MEME"} token
-          {pricePerTokenUsd && (
-            <span className="ml-2 text-neutral-500">
-              (≈ {pricePerTokenUsd} USD)
-            </span>
+          Price per {memeTokenSymbol || "MEME"} token:{" "}
+          {pricePerTokenUsd ? (
+            <span className="text-green-400 font-semibold">${pricePerTokenUsd} USD</span>
+          ) : (
+            <span className="text-white">{formatSmallEthPrice(formatEther(pricePerTokenWei))} ETH</span>
           )}
         </div>
       )}

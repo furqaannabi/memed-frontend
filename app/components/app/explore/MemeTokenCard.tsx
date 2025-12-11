@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Flame, Timer, Rocket, XCircle, Unlock } from "lucide-react";
 import { Link } from "react-router";
+import { formatEther } from "viem";
 import type { TokenContractData } from "@/hooks/contracts/useTokensBatchData";
+import { useEthUsdPrice } from "@/hooks/contracts/useChainlinkPriceFeed";
 
 interface MemeTokenCardProps {
   token: {
@@ -29,11 +31,20 @@ export function MemeTokenCard({
   contractData,
 }: MemeTokenCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // Get ETH price for USD conversion
+  const { data: priceData } = useEthUsdPrice();
 
   // Use pre-fetched contract data instead of making individual calls
   // This eliminates 2 contract calls per token card (27 calls → 2 calls per page!)
   const status = contractData?.status ?? 0;
   const isFailed = contractData?.isFailed ?? false;
+  
+  // Get total raised ETH from fairLaunchData (index 2 = totalCommitted)
+  const totalCommitted = contractData?.fairLaunchData?.[2] as bigint | undefined;
+  const raisedEthNum = totalCommitted ? Number(formatEther(totalCommitted)) : 0;
+  const raisedEth = raisedEthNum.toFixed(4);
+  const raisedUsd = priceData ? (raisedEthNum * priceData.priceNumber).toFixed(2) : null;
 
   // Use custom link if provided, otherwise default to token detail page
   const destination = linkTo || `/explore/meme/${token.id}`;
@@ -104,16 +115,13 @@ export function MemeTokenCard({
           <div className="flex items-center justify-between text-[10px] sm:text-xs mb-1 sm:mb-2">
             <span
               className="text-gray-400 text-[10px] sm:text-xs truncate"
-              title={`Market Cap: ${token.marketCap} ETH`}
+              title={`Raised: ${raisedEth} ETH${raisedUsd ? ` ($${raisedUsd})` : ''}`}
             >
-              {token.active ? (
-                "13k ETH /"
-              ) : (
-                <span className="text-primary-500 font-semibold pr-1 sm:pr-2">
-                  Mkt Cap:
-                </span>
-              )}
-              <span className="text-white">{token.marketCap} ETH</span>
+              <span className="text-green-500 font-semibold pr-1 sm:pr-2">
+                Raised:
+              </span>
+              <span className="text-white">{raisedEth} Ξ</span>
+              {raisedUsd && <span className="text-green-400 ml-1">(${raisedUsd})</span>}
             </span>
           </div>
 
