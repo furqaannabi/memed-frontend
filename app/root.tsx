@@ -40,6 +40,32 @@ import { Toaster, toast } from "sonner";
  */
 export const links: Route.LinksFunction = () => [];
 
+export const meta: Route.MetaFunction = () => {
+  return [
+    { title: "memed.fun" },
+    {
+      name: "description",
+      content:
+        "The fair launch platform for memecoins on Base. Launch, trade, and battle memecoins instantly.",
+    },
+    { property: "og:title", content: "memed.fun" },
+    {
+      property: "og:description",
+      content:
+        "The fair launch platform for memecoins on Base. Launch, trade, and battle memecoins instantly.",
+    },
+    { property: "og:image", content: "/android-chrome-512x512.png" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: "/android-chrome-512x512.png" },
+    { name: "twitter:title", content: "memed.fun" },
+    {
+      name: "twitter:description",
+      content:
+        "The fair launch platform for memecoins on Base. Launch, trade, and battle memecoins instantly.",
+    },
+  ];
+};
+
 /**
  * LAYOUT COMPONENT
  *
