@@ -37,6 +37,7 @@ interface Battle {
   heatB: bigint;
   startTime: bigint;
   endTime: bigint;
+  challengeTime: bigint;
   status: BattleStatus;
   winner: `0x${string}`;
   totalReward: bigint;

@@ -67,6 +67,7 @@ interface Battle {
   heatB: bigint;
   startTime: bigint;
   endTime: bigint;
+  challengeTime: bigint; // Time when challenge was created (deadline = challengeTime + CHALLENGE_DURATION)
   status: BattleStatus;
   winner: `0x${string}`;
   totalReward: bigint;
@@ -1087,6 +1088,30 @@ export default function Battles() {
                           })()}
                         </div>
                       </div>
+
+                      {/* Challenge Deadline (for pending challenges) */}
+                      {battle.status === 1 && (
+                        <div className="mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-yellow-400" />
+                            <span className="text-neutral-300 text-sm font-medium">
+                              Response Deadline
+                            </span>
+                          </div>
+                          <span className="text-yellow-400 font-bold text-base">
+                            {(() => {
+                              // CHALLENGE_DURATION from contract is 600 seconds (10 minutes)
+                              const CHALLENGE_DURATION = 600n;
+                              const deadline = Number(battle.challengeTime) + Number(CHALLENGE_DURATION);
+                              const remaining = deadline - currentTime;
+                              if (remaining <= 0) return "Expired";
+                              const mins = Math.floor(remaining / 60);
+                              const secs = remaining % 60;
+                              return `${mins}:${secs.toString().padStart(2, '0')}`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Battle Progress Bar (for active battles) */}
                       {battle.status === 2 && (
